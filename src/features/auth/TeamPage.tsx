@@ -50,7 +50,7 @@ export default function TeamPage() {
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
             <span class="icon icon-lg text-primary" innerHTML={ICONS['users']} />
           </div>
-          <h1 class="text-2xl font-bold text-text">Týmový manažer</h1>
+          <h1 class="text-2xl font-bold text-text">tymy.cz</h1>
           <p class="text-muted mt-1">Vyberte tým, ke kterému se chcete přihlásit</p>
         </div>
 
@@ -59,28 +59,33 @@ export default function TeamPage() {
             <label for="team" class="label">
               Adresa týmu
             </label>
-            <div class="flex items-stretch">
+            <div class="flex items-center gap-2">
               <input
                 id="team"
                 type="text"
-                class="input w-full rounded-r-none"
+                class="input text-center font-medium"
+                style="width: 5.5rem"
                 value={name()}
                 onInput={e => {
                   setName(e.currentTarget.value)
                   setError(null)
                 }}
-                placeholder="mujtym"
+                placeholder="tym"
                 autocomplete="off"
                 autocapitalize="none"
                 spellcheck={false}
+                maxlength={40}
                 required
                 disabled={checking()}
                 autofocus
               />
-              <span class="inline-flex items-center px-3 border border-l-0 border-border rounded-r-md bg-50 text-sm text-muted whitespace-nowrap">
+              <span class="text-xl font-semibold text-text leading-none whitespace-nowrap">
                 .{TEAM_DOMAIN}
               </span>
             </div>
+            <p class="text-xs text-muted mt-1">
+              Například <span class="font-medium text-text">dev.{TEAM_DOMAIN}</span>
+            </p>
           </div>
 
           <Show when={error()}>
@@ -106,8 +111,7 @@ export default function TeamPage() {
         </form>
 
         <p class="text-xs text-muted text-center mt-6">
-          Adresu týmu najdete v e-mailu od správce týmu, například
-          <span class="whitespace-nowrap font-medium"> mujtym.{TEAM_DOMAIN}</span>.
+          Adresu týmu najdete v e-mailu od správce týmu.
         </p>
       </div>
     </div>

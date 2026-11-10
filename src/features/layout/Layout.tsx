@@ -100,7 +100,7 @@ export default function Layout(props: LayoutProps) {
           </button>
 
           <A href="/events" class="flex items-center gap-2 text-lg font-semibold text-text truncate">
-            Týmový manažer
+            tymy.cz
           </A>
 
           {/* Desktop navigation */}

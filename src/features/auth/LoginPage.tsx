@@ -59,7 +59,7 @@ export default function LoginPage() {
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
             <span class="icon text-primary" innerHTML={ICONS['calendar']} />
           </div>
-          <h1 class="text-2xl font-bold text-text">Týmový manažer</h1>
+          <h1 class="text-2xl font-bold text-text">tymy.cz</h1>
           <p class="text-muted mt-1">Přihlaste se pro přístup k událostem a chatu</p>
           <Show when={currentTeam()}>
             {(host) => (

@@ -11,7 +11,7 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'robots.txt'],
       manifest: {
-        name: 'Týmový manažer',
+        name: 'tymy.cz',
         short_name: 'Tymy',
         description: 'Aplikace pro správu sportovního týmu',
         theme_color: '#343a40',
