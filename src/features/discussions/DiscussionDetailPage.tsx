@@ -4,7 +4,7 @@
 //   user scrolls up and the reading position is preserved while they prepend
 // – one date divider per day, one separator between messages
 
-import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, Show } from 'solid-js'
 import { useNavigate, useParams } from '@solidjs/router'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import {
@@ -57,7 +57,17 @@ function dayLabel(date: Date): string {
 const postedAt = (post: DiscussionPost): Date => parseApiDate(post.createdAt)
 
 const authorName = (post: DiscussionPost): string =>
-  post.createdBy.callName || post.createdBy.displayName || post.createdBy.login
+  post.createdBy?.callName ||
+  post.createdBy?.displayName ||
+  post.createdBy?.login ||
+  post.userName ||
+  'Neznámý autor'
+
+// Posts whose author account was deleted come back with `createdBy: null` (only
+// `userName`). Give each unknown author a unique grouping key so unrelated system
+// posts are never merged into one avatar-less block.
+const authorKey = (post: DiscussionPost): string =>
+  post.createdById === null ? `unknown-${post.id}` : `user-${post.createdById}`
 
 // Group consecutive posts by the same author when they are close in time, the way
 // chat threads do, so a burst of messages does not repeat the avatar every line.
@@ -77,7 +87,7 @@ function toChatItems(posts: DiscussionPost[]): ChatItem[] {
 
     const grouped =
       previous !== undefined &&
-      previous.createdById === post.createdById &&
+      authorKey(previous) === authorKey(post) &&
       date.getTime() - postedAt(previous).getTime() < GROUPING_WINDOW_MS
 
     items.push({ type: 'post', key: `post-${post.id}`, post, grouped })
@@ -304,7 +314,7 @@ export default function DiscussionDetailPage() {
 
   // ---------- render ----------
 
-  const renderItem = (item: ChatItem) => {
+  const renderItemBody = (item: ChatItem) => {
     if (item.type === 'day') {
       return (
         <div class="flex items-center gap-3 pt-4 pb-2">
@@ -320,12 +330,26 @@ export default function DiscussionDetailPage() {
       <div class="flex gap-3 py-3 border-b border-border-light last:border-b-0">
         <div class="w-8 flex-shrink-0">
           <Show when={!item.grouped}>
-            <img
-              src={apiAssetUrl(post.createdBy.pictureUrl)}
-              alt=""
-              loading="lazy"
-              class="w-8 h-8 rounded-full object-cover border border-border"
-            />
+            <Show
+              when={post.createdBy?.pictureUrl}
+              fallback={
+                <span
+                  class="w-8 h-8 rounded-full bg-secondary-light flex items-center justify-center text-muted"
+                  title={authorName(post)}
+                >
+                  <span class="icon-sm" innerHTML={ICONS['user']} />
+                </span>
+              }
+            >
+              {(pictureUrl) => (
+                <img
+                  src={apiAssetUrl(pictureUrl())}
+                  alt=""
+                  loading="lazy"
+                  class="w-8 h-8 rounded-full object-cover border border-border"
+                />
+              )}
+            </Show>
           </Show>
         </div>
         <div class="flex-1 min-w-0">
@@ -349,6 +373,17 @@ export default function DiscussionDetailPage() {
       </div>
     )
   }
+
+  // One broken post must never take the whole conversation down with it.
+  const renderItem = (item: ChatItem) => (
+    <ErrorBoundary
+      fallback={
+        <p class="py-3 text-xs text-danger">Tento příspěvek se nepodařilo zobrazit.</p>
+      }
+    >
+      {renderItemBody(item)}
+    </ErrorBoundary>
+  )
 
   return (
     <Show when={!postsQuery.isPending} fallback={<Loading />}>

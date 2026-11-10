@@ -89,6 +89,10 @@ Not available on this host: `captions` (404), `notes/html` (404).
 - **Discussion pages are newest-first:** `/discussion/{id}/bb/{page}` returns ~20 posts in
   *descending* order, page 1 = newest, last page = oldest (verified on discussion 1:
   127 posts, 7 pages). The Blueprint example is misleading.
+- **`DiscussionPost.createdBy` can be `null`** when the author account was deleted
+  (`createdById: null`, only `userName` survives — e.g. `Autocreator135`, `AUTOTEST`).
+  Discussion 1 has 2 such posts (page 6), discussion 2 has 68. Both fields are typed
+  nullable now.
 
 ---
 
@@ -259,3 +263,7 @@ npm run icons      # regenerate PNG app icons
 - **Trust the live API over `tymy.apib` for ordering/paging.** The Blueprint shows
   discussion page 1 containing the oldest posts; the server actually returns the newest
   first. Always probe with one real request before wiring pagination.
+- **Don't assume embedded relations exist** (`createdBy`, `pictureUrl`…). A null
+  `createdBy` used to throw inside the chat's render effect and blank the page. Each chat
+  message is now wrapped in a Solid `ErrorBoundary` so one bad record can't take the
+  conversation down.

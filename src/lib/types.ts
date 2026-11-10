@@ -185,17 +185,19 @@ export interface DiscussionPost {
   id: number
   discussionId: number
   post: string
-  createdById: number
+  /** Null for posts whose author no longer exists (system/AUTOTEST posts). */
+  createdById: number | null
   createdAt: string
   updatedById?: number | null
   updatedAt?: string | null
   sticky: boolean
   newPost: boolean
+  /** Fallback author label when `createdBy` is null. */
   userName?: string | null
   reactions?: Record<string, number[]>
   createdAtStr: string
   updatedAtStr?: string | null
-  createdBy: UserSummary
+  createdBy: UserSummary | null
 }
 
 export interface DiscussionPage {
