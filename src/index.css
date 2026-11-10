@@ -558,6 +558,24 @@ label {
 .chat-bubble p {
   margin-bottom: var(--space-2);
 }
+/* A chat column must never scroll sideways: break pathological tokens (long hashes,
+   unbroken URLs) instead of letting them widen the message. Code blocks keep their own
+   horizontal scroll (see .prose pre). */
+.chat-bubble {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+.chat-bubble pre,
+.chat-bubble code {
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.chat-bubble table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
 
 .btn {
   display: inline-flex;

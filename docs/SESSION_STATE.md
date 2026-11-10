@@ -161,6 +161,9 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     `scrollHeight - anchor` so the position stays put.
   - One day divider per day (`Dnes` / `Včera` / date), one separator per message,
     consecutive posts by the same author within 5 min are grouped (no repeated avatar).
+  - Message text never widens the column: `.chat-bubble` uses `overflow-wrap: anywhere`,
+    so a long unbroken URL/hash wraps instead of causing horizontal scroll; `[code]`
+    blocks keep their own scrollbar (`.prose pre`).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
     (the client-side preview toggle was removed on request).
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
