@@ -161,6 +161,17 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   pills that open `/events/:id`. The grid queries the visible month only.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
+- **Event attendance** (`EventRsvp` + `EventAttendance`):
+  - Status buttons are compact and use the **event type's own captions** (`Přijdu`,
+    `Omlouvám se`, `Přijdu později` on pd) instead of the built-in label map.
+  - The note lives in `attendance.preDescription` and is saved with `POST /attendance`
+    together with the current status (the API requires a pre- or post-status, so the
+    field is disabled until a status exists). Saves on blur/Enter.
+  - The list is grouped by answer (status order from the event type, then "Bez odpovědi")
+    and only shows **active players** (`user.status === 'PLAYER'`) plus anyone who actually
+    answered — 175 raw entries became 59 rows on pd. Each row: avatar (with a generic glyph
+    fallback when the picture 404s), the display name as returned (`displayName ?? callName`)
+    and the note underneath. The uppercase login is gone.
 - **RSVP** uses optimistic cache updates on the active tab key; payload
   `[{userId: <me>, eventId, preStatus, preDescription}]`.
 - **Discussion detail = chat view** (`DiscussionDetailPage`):
@@ -283,6 +294,10 @@ smoke test confirmed:
   renders November 2026 with 14 event pills and opens `/events/{id}` when clicked; the
   detail header shows only the pencil and trash icons (no text) and `/events/:id/edit`
   renders the prefilled form.
+- Event detail (pd, event 4851): compact RSVP buttons using the team's own captions, note
+  field saving through `POST /attendance` (persisted across a reload, then cleared), and an
+  attendance list grouped Přijdu 17 / Omlouvám se 10 / Přijdu později 2 / Bez odpovědi 30
+  out of 175 raw entries.
 - Team-aware avatars: the `/user_pics` proxy keeps `?team=…` (Vite's `rewrite` ran before
   we could read it, so every avatar fell back to the wrong host).
 - All `⏳` / `✓` glyphs replaced with MDI icons (splash, page loaders, button spinners,
@@ -293,8 +308,10 @@ smoke test confirmed:
 ## 7. Open items / next steps (priority order)
 
 1. **Verify write endpoints** with one real action each (currently docs-based only):
-   `POST /attendance`, `POST /polls/{id}/votes`, `PUT /user/{id}`,
+   `POST /polls/{id}/votes`, `PUT /user/{id}`,
    `POST /user/{id}/avatar`, `POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`.
+   `POST /attendance` is **verified** (200, returns the saved record; a note written on pd
+   survived a reload).
    Discussion writes are **done**: `POST /discussions/{id}/post` (201),
    `PUT` (200, sets `updatedAt`), `POST|DELETE …/post/{postId}/react` (200) — all verified
    on discussion 2. `DELETE /discussions/{id}/post` answers 403 for this account because

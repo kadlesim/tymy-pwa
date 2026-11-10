@@ -31,6 +31,14 @@ export default function EventDetailPage() {
   const eventId = () => parseInt(params['id'] ?? '0', 10)
   const [showHistory, setShowHistory] = createSignal(false)
 
+  // The API has no `myAttendance`; derive it from the attendance array.
+  const myAttendanceEntry = () =>
+    eventQuery.data?.attendance?.find(a => a.userId === auth().user?.id)
+  const myStatus = () =>
+    eventQuery.data?.myAttendance?.preStatus ?? myAttendanceEntry()?.preStatus
+  const myNote = () =>
+    eventQuery.data?.myAttendance?.preDescription ?? myAttendanceEntry()?.preDescription ?? ''
+
   const eventQuery = useQuery<Event, Error>(() => ({
     queryKey: queryKeys.event(eventId()),
     queryFn: () => getEvent(eventId()),
@@ -68,6 +76,23 @@ export default function EventDetailPage() {
     }
   }))
 
+  // A note is stored on the attendance record, so it is saved together with the status.
+  const noteMutation = useMutation<void, Error, string>(() => ({
+    mutationFn: (note: string) =>
+      setAttendance([
+        {
+          userId: auth().user?.id ?? 0,
+          eventId: eventId(),
+          preStatus: myStatus() ?? '',
+          preDescription: note
+        }
+      ]),
+    onSuccess: () => {
+      invalidateEvents()
+      eventQuery.refetch()
+    }
+  }))
+
   const handleDelete = () => {
     if (confirm('Opravdu chcete tuto událost smazat? Tato akce je nevratná.')) {
       deleteMutation.mutate()
@@ -100,9 +125,6 @@ export default function EventDetailPage() {
           const isPast = () => getEventStatus(event()) === 'past'
           const statusOptions = () => event().eventType?.preStatusSet ?? []
           const canRsvp = () => !isPast() && statusOptions().length > 0
-          const myStatus = () =>
-            event().myAttendance?.preStatus ??
-            event().attendance?.find(a => a.userId === auth().user?.id)?.preStatus
 
           return (
             <div class="event-detail max-w-3xl mx-auto">
@@ -116,22 +138,29 @@ export default function EventDetailPage() {
               <EventRsvp
                 statusOptions={statusOptions().map(s => ({ code: s.code, caption: s.caption, color: s.color }))}
                 myStatus={myStatus() ?? undefined}
+                myNote={myNote()}
                 canRsvp={canRsvp()}
                 isPending={rsvpMutation.isPending}
+                isNotePending={noteMutation.isPending}
+                noteError={noteMutation.isError ? (noteMutation.error as Error | null)?.message ?? 'Poznámku se nepodařilo uložit.' : null}
                 onRsvp={(code) => rsvpMutation.mutate(code)}
+                onNoteSave={(note) => noteMutation.mutate(note)}
               />
 
               <Show when={event().attendance && event().attendance!.length > 0}>
                 <EventAttendance
+                  statusOptions={statusOptions().map(s => ({ code: s.code, caption: s.caption }))}
                   attendance={(event().attendance ?? []).map(a => ({
                     userId: a.userId,
                     preStatus: a.preStatus,
+                    preDescription: a.preDescription,
                     user: a.user
                       ? {
                           pictureUrl: a.user.pictureUrl,
                           callName: a.user.callName,
                           displayName: a.user.displayName,
-                          login: a.user.login
+                          login: a.user.login,
+                          status: a.user.status
                         }
                       : undefined
                   }))}
