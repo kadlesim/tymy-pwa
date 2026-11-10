@@ -111,7 +111,7 @@ export default function RegisterPage() {
       <div class="auth-page min-h-dvh flex items-center justify-center p-4 bg-50">
         <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up text-center">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light text-success mb-4">
-            <span class="icon text-2xl">✓</span>
+            <span class="icon icon-lg" innerHTML={ICONS['check']} />
           </div>
           <h1 class="text-2xl font-bold text-text mb-2">Registrace úspěšná</h1>
           <p class="text-muted mb-6">
@@ -282,7 +282,7 @@ export default function RegisterPage() {
           >
             {isLoading() ? (
               <span class="flex items-center justify-center gap-2">
-                <span class="animate-spin">⏳</span>
+                <span class="icon-sm animate-spin" innerHTML={ICONS['spinner']} />
                 {tCommon('loading')}
               </span>
             ) : (

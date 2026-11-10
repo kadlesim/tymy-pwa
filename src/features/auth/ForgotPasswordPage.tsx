@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
         {success() ? (
           <div class="text-center">
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light text-success mb-4">
-              <span class="icon text-2xl">✓</span>
+              <span class="icon icon-lg" innerHTML={ICONS['check']} />
             </div>
             <h2 class="text-xl font-semibold text-text mb-2">E-mail odeslán</h2>
             <p class="text-muted mb-6">
@@ -108,7 +108,7 @@ export default function ForgotPasswordPage() {
             >
               {isLoading() ? (
                 <span class="flex items-center justify-center gap-2">
-                  <span class="animate-spin">⏳</span>
+                  <span class="icon-sm animate-spin" innerHTML={ICONS['spinner']} />
                   {tCommon('loading')}
                 </span>
               ) : (

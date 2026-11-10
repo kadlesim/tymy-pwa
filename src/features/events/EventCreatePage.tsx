@@ -14,6 +14,7 @@ import {
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
 import { formatApiDate } from '../../lib/date-filters'
+import { ICONS } from '../../lib/icons'
 
 // Value shaped for <input type="datetime-local">, in local time.
 function toLocalInput(date: Date): string {
@@ -159,7 +160,7 @@ export default function EventCreatePage() {
       fallback={
         <div class="flex items-center justify-center h-64">
           <div class="flex flex-col items-center gap-4">
-            <div class="animate-spin text-primary">⏳</div>
+            <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} />
             <p class="text-muted">{tCommon('loading')}</p>
           </div>
         </div>

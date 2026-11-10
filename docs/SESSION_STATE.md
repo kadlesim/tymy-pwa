@@ -115,6 +115,7 @@ src/
 │   ├── api.ts          typed client, envelope unwrap, login, filters, apiAssetUrl
 │   ├── auth.ts         reactive auth store (login/register/logout/reset, guards)
 │   ├── captions.ts     i18n with built-in Czech defaults
+│   ├── team.ts         team (subdomain) selection, stored as `tymy:team`
 │   ├── bbcode.ts       safe BBCode ↔ HTML
 │   ├── date-filters.ts API date formatting + display helpers
 │   ├── icons.ts        MDI Light inline SVG set (shared by layout and features)
@@ -122,7 +123,7 @@ src/
 │   ├── pwa.ts          SW update listeners, install prompt, push helpers
 │   └── types.ts        API types aligned to live payloads
 ├── features/
-│   ├── auth/           Login, Register, ForgotPassword, ResetPassword
+│   ├── auth/           TeamPage, Login, Register, ForgotPassword, ResetPassword
 │   ├── events/         EventsPage, EventDetailPage, EventCreatePage,
 │   │                   EventHeader, EventRsvp, EventAttendance, EventLink, constants
 │   ├── discussions/    DiscussionsPage, DiscussionDetailPage
@@ -176,6 +177,18 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
   from API flags (`canPlan`, `canWrite`, `canView`, …).
 - **Guards** wait for `initAuth()` (`useIsLoading`) so deep links survive reload.
+- **Team selection** (`/team`, `src/features/auth/TeamPage.tsx`): every team lives on
+  `<subdomain>.tymy.cz`, so the address is chosen *before* login and stored in
+  `tymy:team`. It is skipped whenever a valid session exists; `/team` is where the guards
+  send an unauthenticated user (after logout, after an expiry, or on a cold start), and
+  the login screen offers "změnit tým".
+  - Every API call sends `X-Team-Subdomain`; the **dev proxy** turns it into a `Host`
+    header (all team vhosts share the Apache box — `Host: nope.tymy.cz` answers the
+    wildcard 302, `Host: dev.tymy.cz` answers the API). Avatars carry the team as
+    `?team=…` because an `<img>` cannot set headers.
+  - `checkTeam()` probes `/api/eventTypes`: 200/401 = the team exists, a 3xx (redirect to
+    `www.tymy.cz/404.html`) = unknown subdomain.
+  - In production the app must be served **on the team's own domain** (same-origin API).
 - **Session validation** (`src/lib/auth.ts`, `onUnauthorized` in `src/lib/api.ts`):
   - On start-up a stored session is verified with `GET /user/{id}` *before* the guard
     lets anyone in; a 401/403 drops the token, the cached user `tymy:user`, the
@@ -238,6 +251,12 @@ smoke test confirmed:
 - Reports verified live: year auto-selects the newest year with data (2022), matrix shows
   26 players × 5 events, XLSX export returns a 7 520-byte `PK` zip through the proxy.
 - Files page verified: renders the explanation + link to the legacy `/file` page.
+- Team flow verified in Edge: fresh start → `/team` (prefilled `dev`), unknown subdomain
+  → "Tým „nope12345.tymy.cz“ nebyl nalezen.", `dev` → `/login` (shows `dev.tymy.cz` +
+  "změnit tým"), login → `/events`, reload while logged in skips `/team`, logout and a
+  stale token both land on `/team`.
+- All `⏳` / `✓` glyphs replaced with MDI icons (splash, page loaders, button spinners,
+  success screens).
 
 ---
 
@@ -324,3 +343,9 @@ npm run icons      # regenerate PNG app icons
 - **Binary endpoints break the envelope assumption.** `event/export/*` returns an XLSX
   (`application/octet-stream`, `PK` magic), not `{status, data}` — use `requestBlob()`,
   never `request()`.
+- **One icon set only** (Material Design Light). No emoji/unicode glyphs in the UI — the
+  old `⏳` splash and `✓` screens have been replaced by `ICONS['spinner']` / `ICONS['check']`.
+- **Vite's proxy has no `router` option** in 5.4 (it is silently ignored, so every request
+  quietly hit the default host). Multi-team dev routing therefore overrides the `Host`
+  header in `proxyReq`; verify with
+  `curl -H "X-Team-Subdomain: nope12345" localhost:3000/api/eventTypes` → 302.

@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import solid from 'vite-plugin-solid'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const TEAM_SUBDOMAIN_PATTERN = /^[a-z0-9-]+$/
+
 export default defineConfig({
   plugins: [
     solid(),
@@ -162,14 +164,22 @@ export default defineConfig({
       '/api': {
         // dev.tymy.cz serves HTTPS only and sends no CORS headers,
         // so all API traffic must be proxied through the dev server.
+        // All team vhosts live on the same Apache, so the team is selected by
+        // overriding the Host header from `X-Team-Subdomain` (verified: Host
+        // "nope.tymy.cz" answers the wildcard 302, Host "dev.tymy.cz" answers the API).
         target: 'https://dev.tymy.cz',
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: 'localhost',
         configure: (proxy: any) => {
-          // The session is a PHPSESSID cookie, which JS cannot set.
-          // In development we relay the stored session key as a cookie upstream.
           proxy.on('proxyReq', (proxyReq: any, req: any) => {
+            const team = req.headers['x-team-subdomain']
+            if (typeof team === 'string' && TEAM_SUBDOMAIN_PATTERN.test(team)) {
+              proxyReq.setHeader('host', `${team}.tymy.cz`)
+            }
+
+            // The session is a PHPSESSID cookie, which JS cannot set.
+            // In development we relay the stored session key as a cookie upstream.
             const key = req.headers['x-session-key']
             if (typeof key === 'string' && key) {
               proxyReq.setHeader('cookie', `PHPSESSID=${key}`)
@@ -178,9 +188,20 @@ export default defineConfig({
         }
       },
       '/user_pics': {
+        // Avatars and uploads; the team travels as a query parameter (`?team=…`)
+        // because an <img> cannot send the custom header.
         target: 'https://dev.tymy.cz',
         changeOrigin: true,
-        secure: true
+        secure: true,
+        configure: (proxy: any) => {
+          proxy.on('proxyReq', (proxyReq: any, req: any) => {
+            const team = new URL(req.url ?? '/', 'http://localhost').searchParams.get('team')
+            if (team && TEAM_SUBDOMAIN_PATTERN.test(team)) {
+              proxyReq.setHeader('host', `${team}.tymy.cz`)
+            }
+          })
+        },
+        rewrite: (path: string) => path.replace(/[?&]team=[^&]*/, '').replace(/\?$/, '')
       }
     }
   }

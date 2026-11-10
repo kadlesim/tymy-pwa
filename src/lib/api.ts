@@ -24,6 +24,8 @@ import type {
   Caption
 } from './types'
 
+import { getTeam } from './team'
+
 // Re-export types for consumers
 export type {
   ApiResponse,
@@ -52,6 +54,14 @@ export type {
 const API_BASE = (import.meta.env as any).VITE_API_BASE ?? '/api'
 const TSID_STORAGE_KEY = 'tymy:tsid'
 const USER_STORAGE_KEY = 'tymy:user'
+const TEAM_HEADER = 'X-Team-Subdomain'
+
+/** Headers every call carries so the (dev) proxy reaches the right team host. */
+function withTeam(headers: Headers): Headers {
+  const team = getTeam()
+  if (team) headers.set(TEAM_HEADER, team)
+  return headers
+}
 
 export class ApiError extends Error {
   constructor(
@@ -133,6 +143,7 @@ async function requestEnvelope<T>(path: string, init: RequestInit = {}): Promise
     // sent automatically (credentials: 'include').
     headers.set('X-Session-Key', tsid)
   }
+  withTeam(headers)
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -172,7 +183,12 @@ export function apiAssetUrl(path?: string): string {
   if (/^(https?:)?\/\//i.test(path) || path.startsWith('data:')) return path
   const origin = (import.meta.env as Record<string, string | undefined>)['VITE_ASSET_ORIGIN'] ?? ''
   const normalised = path.startsWith('/') ? path : `/${path}`
-  return `${origin}${normalised}`
+  if (origin) return `${origin}${normalised}`
+
+  // In development the dev proxy serves the assets; tell it which team to ask.
+  const team = import.meta.env.DEV ? getTeam() : null
+  if (!team) return normalised
+  return `${normalised}${normalised.includes('?') ? '&' : '?'}team=${encodeURIComponent(team)}`
 }
 
 // ============================================
@@ -181,7 +197,7 @@ export function apiAssetUrl(path?: string): string {
 
 async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
   const tsid = getTSID()
-  const headers = new Headers(init.headers)
+  const headers = withTeam(new Headers(init.headers))
   if (tsid) headers.set('X-Session-Key', tsid)
 
   const response = await fetch(`${API_BASE}${path}`, {
@@ -217,6 +233,30 @@ export async function exportAttendance(
   const params = new URLSearchParams({ from, until })
   if (type !== undefined) params.set('type', String(type))
   return requestBlob(`/event/export/attendance?${params.toString()}`)
+}
+
+// ============================================
+// Teams
+// ============================================
+
+/**
+ * Checks that `<team>.tymy.cz` exists before the user continues to the login screen.
+ * A real team answers 401 (login required) or 200; unknown subdomains are redirected
+ * to the 404 page, which we treat as "not found".
+ */
+export async function checkTeam(team: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_BASE}/eventTypes`, {
+      headers: { Accept: 'application/json', [TEAM_HEADER]: team },
+      redirect: 'manual',
+      cache: 'no-store'
+    })
+    if (response.type === 'opaqueredirect') return false
+    if (response.status >= 300 && response.status < 400) return false
+    return response.status === 200 || response.status === 401
+  } catch {
+    return false
+  }
 }
 
 // ============================================

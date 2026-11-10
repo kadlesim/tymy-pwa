@@ -10,6 +10,7 @@
 
 import {
   mdilAccount,
+  mdilAlertCircle,
   mdilArrowLeft,
   mdilBell,
   mdilCalendar,
@@ -85,6 +86,7 @@ export const ICONS: Record<string, string> = {
 
   // Actions / status
   check: icon(mdilCheck),
+  alert: icon(mdilAlertCircle),
   edit: icon(mdilPencil),
   delete: icon(mdilDelete),
   download: icon(mdilDownload),

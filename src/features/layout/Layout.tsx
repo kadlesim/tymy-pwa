@@ -81,7 +81,7 @@ export default function Layout(props: LayoutProps) {
   const handleLogout = async () => {
     setUserMenuOpen(false)
     await doLogout()
-    navigate('/login')
+    navigate('/team')
   }
 
   return (

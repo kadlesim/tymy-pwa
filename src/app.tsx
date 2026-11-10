@@ -5,8 +5,10 @@ import { Router, Route, Navigate, useLocation, type RouteSectionProps } from '@s
 import { initAuth, revalidateSession, useIsAuthenticated, useIsLoading } from './lib/auth'
 import { loadCaptions } from './lib/captions'
 import { initPWA, setDeferredPrompt } from './lib/pwa'
+import { ICONS } from './lib/icons'
 import Layout from './features/layout/Layout'
 import LoginPage from './features/auth/LoginPage'
+import TeamPage from './features/auth/TeamPage'
 import RegisterPage from './features/auth/RegisterPage'
 import ForgotPasswordPage from './features/auth/ForgotPasswordPage'
 import ResetPasswordPage from './features/auth/ResetPasswordPage'
@@ -59,7 +61,7 @@ interface BeforeInstallPromptEvent extends Event {
 function Splash() {
   return (
     <div class="min-h-dvh flex items-center justify-center">
-      <div class="animate-spin text-primary text-2xl">⏳</div>
+      <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} aria-label="Načítání" />
     </div>
   )
 }
@@ -71,9 +73,20 @@ function PrivateRoute(props: RouteSectionProps<unknown>) {
     <Show when={!useIsLoading()} fallback={<Splash />}>
       <Show
         when={useIsAuthenticated()}
-        fallback={<Navigate href="/login" state={{ from: location.pathname }} />}
+        fallback={<Navigate href="/team" state={{ from: location.pathname }} />}
       >
         <Layout>{props.children as any}</Layout>
+      </Show>
+    </Show>
+  )
+}
+
+// Team selection: skipped as soon as a valid session exists.
+function TeamRoute(props: RouteSectionProps<unknown>) {
+  return (
+    <Show when={!useIsLoading()} fallback={<Splash />}>
+      <Show when={!useIsAuthenticated()} fallback={<Navigate href="/events" />}>
+        <>{props.children as any}</>
       </Show>
     </Show>
   )
@@ -92,6 +105,9 @@ function PublicRoute(props: RouteSectionProps<unknown>) {
 export default function App() {
   return (
     <Router>
+      <Route path="/team" component={TeamRoute} >
+        <Route path="" component={TeamPage} />
+      </Route>
       <Route path="/login" component={PublicRoute} >
         <Route path="" component={LoginPage} />
       </Route>

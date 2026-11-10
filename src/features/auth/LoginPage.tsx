@@ -3,6 +3,7 @@
 import { createSignal, Show } from 'solid-js'
 import { useNavigate, useLocation } from '@solidjs/router'
 import { doLogin, useSessionExpired, clearSessionExpired } from '../../lib/auth'
+import { getTeam, teamFromHostname, teamHost } from '../../lib/team'
 import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../layout/Layout'
 
@@ -20,6 +21,11 @@ export default function LoginPage() {
   
   // Get redirect path from state
   const from = (location.state as { from?: string })?.from || '/events'
+
+  const currentTeam = () => {
+    const team = getTeam() ?? teamFromHostname()
+    return team ? teamHost(team) : null
+  }
   
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
@@ -55,6 +61,20 @@ export default function LoginPage() {
           </div>
           <h1 class="text-2xl font-bold text-text">Týmový manažer</h1>
           <p class="text-muted mt-1">Přihlaste se pro přístup k událostem a chatu</p>
+          <Show when={currentTeam()}>
+            {(host) => (
+              <p class="text-xs text-muted mt-2">
+                {host()}
+                <button
+                  type="button"
+                  class="ml-2 text-primary underline"
+                  onClick={() => navigate('/team')}
+                >
+                  změnit tým
+                </button>
+              </p>
+            )}
+          </Show>
         </div>
         
         {/* Expired session notice */}
@@ -68,7 +88,7 @@ export default function LoginPage() {
         {/* Error message */}
         {error() && (
           <div class="alert alert-danger mb-4 p-3 rounded-lg bg-danger-light text-danger text-sm flex items-center gap-2 animate-slide-down">
-            <span class="icon flex-shrink-0">⚠️</span>
+            <span class="icon flex-shrink-0" innerHTML={ICONS['alert']} />
             <span>{error()}</span>
           </div>
         )}
@@ -144,7 +164,7 @@ export default function LoginPage() {
           >
             {isLoading() ? (
               <span class="flex items-center justify-center gap-2">
-                <span class="animate-spin">⏳</span>
+                <span class="icon-sm animate-spin" innerHTML={ICONS['spinner']} />
                 {tCommon('loading')}
               </span>
             ) : (
