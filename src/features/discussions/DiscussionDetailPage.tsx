@@ -494,7 +494,7 @@ export default function DiscussionDetailPage() {
                   </p>
                 }
               >
-                <form onSubmit={handleSubmit} class="p-3">
+                <form onSubmit={handleSubmit} class="px-3 pt-2 pb-2">
                   <div class="flex items-end gap-2 rounded-md border border-border bg-elevated px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
                     <textarea
                       ref={el => {
@@ -527,12 +527,12 @@ export default function DiscussionDetailPage() {
                     </button>
                   </div>
 
-                  <div class="mt-1.5 flex items-center gap-1">
+                  <div class="mt-1 flex items-center justify-between sm:justify-start gap-1 sm:gap-3">
                     <For each={BBCODE_BUTTONS}>
                       {btn => (
                         <button
                           type="button"
-                          class="p-1.5 rounded-md text-muted hover:bg-100 hover:text-text"
+                          class="p-2 rounded-md text-muted hover:bg-100 hover:text-text"
                           title={btn.title}
                           aria-label={btn.title}
                           onClick={() => insertBbcode(btn.tag)}

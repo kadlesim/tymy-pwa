@@ -515,16 +515,15 @@ label {
    Chat (discussion detail)
    ============================================ */
 
-/* Full-height chat column: fills the space left by the app header, page padding
-   and the mobile bottom navigation, so the composer can stay pinned to the bottom. */
+/* Full-height chat column: fills the space left by the app header and the mobile
+   bottom navigation, so the composer can stay pinned to the bottom. The bottom page
+   padding is deliberately not subtracted, so the composer sits flush above the nav. */
 .chat-shell {
-  height: calc(
-    100dvh - var(--header-height) - var(--bottom-nav-height) - env(safe-area-inset-bottom) - 2rem
-  );
+  height: calc(100dvh - var(--header-height) - var(--bottom-nav-height) - env(safe-area-inset-bottom) - 1rem);
 }
 @media (min-width: 768px) {
   .chat-shell {
-    height: calc(100dvh - var(--header-height) - 3.5rem);
+    height: calc(100dvh - var(--header-height) - 2.5rem);
   }
 }
 

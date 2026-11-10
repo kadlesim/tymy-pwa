@@ -154,9 +154,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     when the user scrolls up. Pages are reversed and sorted ascending before rendering,
     so the newest message sits at the bottom.
   - Composer pinned to the bottom of a full-height `.chat-shell` (height derived from the
-    header/bottom-nav CSS vars in `index.css`); the page itself is **borderless** and
-    centred (`max-w-3xl mx-auto`), separated only by hairlines under the header and above
-    the composer. Scrolling up restores `scrollHeight - anchor` so the position stays put.
+    header/bottom-nav CSS vars in `index.css`); the shell deliberately does not subtract
+    the page's bottom padding, so the composer sits flush above the bottom nav on phones.
+    The page itself is **borderless** and centred (`max-w-3xl mx-auto`), separated only by
+    hairlines under the header and above the composer. Scrolling up restores
+    `scrollHeight - anchor` so the position stays put.
   - One day divider per day (`Dnes` / `Včera` / date), one separator per message,
     consecutive posts by the same author within 5 min are grouped (no repeated avatar).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
