@@ -92,18 +92,9 @@ export default defineConfig({
         runtimeCaching: [
           {
             // Same-origin API (production default base path `/api`).
+            // Never cached: a stale session or stale RSVPs are worse than a round-trip.
             urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 200,
-                maxAgeSeconds: 24 * 60 * 60
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
+            handler: 'NetworkOnly'
           },
           {
             // Cross-origin API hosts used during development / alternate deployments.

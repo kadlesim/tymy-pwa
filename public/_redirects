@@ -1,0 +1,2 @@
+# SPA fallback: every non-file route is handled by the client router.
+/*    /index.html   200

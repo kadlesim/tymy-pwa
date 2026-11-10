@@ -185,8 +185,9 @@ export function apiAssetUrl(path?: string): string {
   const normalised = path.startsWith('/') ? path : `/${path}`
   if (origin) return `${origin}${normalised}`
 
-  // In development the dev proxy serves the assets; tell it which team to ask.
-  const team = import.meta.env.DEV ? getTeam() : null
+  // The team travels as a query parameter because an <img> cannot send headers; the
+  // dev proxy and the production Pages Function both read it.
+  const team = getTeam()
   if (!team) return normalised
   return `${normalised}${normalised.includes('?') ? '&' : '?'}team=${encodeURIComponent(team)}`
 }

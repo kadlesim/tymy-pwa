@@ -29,6 +29,9 @@ yarn-error.log*
 # Testing
 coverage/
 
+# Cloudflare / wrangler local state
+.wrangler/
+
 # Misc
 *.tgz
 .cache/

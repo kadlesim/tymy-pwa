@@ -1,0 +1,12 @@
+# Cloudflare Pages configuration (optional — only needed for CLI deploys).
+# Build: npm run build  →  dist/
+# The Pages Functions in ./functions proxy /api and /user_pics to the team host.
+
+name = "tymy-pwa"
+compatibility_date = "2026-11-01"
+pages_build_output_dir = "dist"
+
+[vars]
+# Upstream team used when the client does not send X-Team-Subdomain / ?team=…
+# Change this to the team this deployment belongs to (e.g. "pd").
+TYMY_DEFAULT_TEAM = "pd"

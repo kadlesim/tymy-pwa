@@ -25,14 +25,12 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 - **Team selection** before login (`/team`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
 
-**Open decision — deployment (nothing implemented yet).** The API has no CORS, so the
-bundle must be served together with a same-origin proxy for `/api/*` and `/user_pics/*`
-that turns `X-Session-Key` into a `Cookie: PHPSESSID=…`. Options discussed: **Cloudflare
-Pages + one Pages Function** (fastest, free, recommended), Netlify/Vercel + function,
-VPS + Caddy, or serving `dist/` from the tymy server itself (best long-term, needs the
-tymy admin). Static-only hosts (GitHub Pages) cannot work. Also to settle for prod:
-one deployment per team vs. mapping `X-Team-Subdomain` in the proxy, `VITE_ASSET_ORIGIN`,
-and switching the workbox `/api/` route from `StaleWhileRevalidate` to `NetworkOnly`.
+**Deployment is prepared but not published.** `functions/` (Pages Functions for `/api` and
+`/user_pics`), `public/_redirects` (SPA fallback) and `wrangler.toml` are in the repo, and
+the production build was rehearsed through `wrangler pages dev` against pd — see
+**`docs/DEPLOYMENT.md`**. What's left is on your side: push the repo to GitHub and create
+the Cloudflare Pages project (build `npm run build`, output `dist`, env
+`TYMY_DEFAULT_TEAM=pd`).
 
 **Next likely tasks** (see §7 for the full list): deploy, then verify the remaining write
 endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`, `POST /user/{id}/avatar`,
