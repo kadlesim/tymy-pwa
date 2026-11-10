@@ -72,9 +72,7 @@ export default function DiscussionsPage() {
                   onClick={() => navigate(`/discussions/${discussion.id}`)}
                 >
                   <div class="flex items-start gap-3">
-                    <div class="w-12 h-12 rounded-lg bg-primary-light flex items-center justify-center flex-shrink-0">
-                      <span class="icon text-primary" innerHTML={ICONS['chat']} />
-                    </div>
+                    <span class="icon icon-lg text-muted mt-0.5 flex-shrink-0" innerHTML={ICONS['chat']} />
                     <div class="flex-1 min-w-0">
                       <div class="flex items-start justify-between gap-2">
                         <h3 class="font-semibold text-text truncate">{discussion.caption}</h3>

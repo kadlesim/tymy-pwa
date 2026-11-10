@@ -83,9 +83,7 @@ export default function PollDetailPage() {
             <div class="poll-detail max-w-2xl mx-auto">
               <div class="mb-6">
                 <div class="flex items-center gap-3 mb-2">
-                  <span class="w-10 h-10 rounded-lg bg-primary-light flex items-center justify-center">
-                    <span class="icon text-primary" innerHTML={ICONS['poll']} />
-                  </span>
+                  <span class="icon icon-lg text-muted" innerHTML={ICONS['poll']} />
                   <div>
                     <h1 class="text-2xl font-bold text-text">{poll().caption}</h1>
                     <div class="flex items-center gap-3 text-sm">

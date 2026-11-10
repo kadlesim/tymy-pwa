@@ -4,7 +4,7 @@
 //   user scrolls up and the reading position is preserved while they prepend
 // – one date divider per day, one separator between messages
 
-import { createEffect, createMemo, createSignal, ErrorBoundary, For, Show } from 'solid-js'
+import { createEffect, createMemo, createSignal, ErrorBoundary, For, onCleanup, Show } from 'solid-js'
 import { useNavigate, useParams } from '@solidjs/router'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import {
@@ -119,6 +119,7 @@ export default function DiscussionDetailPage() {
 
   const [newPost, setNewPost] = createSignal('')
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
+  const [content, setContent] = createSignal<HTMLDivElement>()
   const [atBottom, setAtBottom] = createSignal(true)
   let textareaEl: HTMLTextAreaElement | undefined
 
@@ -203,6 +204,18 @@ export default function DiscussionDetailPage() {
       scrollToBottom()
       loadOlder()
     })
+  })
+
+  // Fonts loading, a growing composer or a viewport change must not silently push the
+  // newest message out of view while the reader is still pinned to the bottom.
+  createEffect(() => {
+    const el = content()
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => {
+      if (atBottom()) scrollToBottom()
+    })
+    observer.observe(el)
+    onCleanup(() => observer.disconnect())
   })
 
   // Older pages were prepended: keep the reading position and fill short panes.
@@ -436,40 +449,42 @@ export default function DiscussionDetailPage() {
                 onScroll={handleScroll}
                 role="log"
               >
-                <Show when={postsQuery.isFetchingNextPage}>
-                  <div class="flex justify-center pt-3">
-                    <span
-                      class="icon-sm text-muted animate-spin"
-                      innerHTML={ICONS['spinner']}
-                      aria-label="Načítání starších příspěvků"
-                    />
-                  </div>
-                </Show>
-                <Show when={!postsQuery.hasNextPage && messages().length > 0}>
-                  <p class="text-center text-xs text-muted pt-3">Začátek diskuze</p>
-                </Show>
+                <div ref={el => setContent(el)} class="flex flex-col">
+                  <Show when={postsQuery.isFetchingNextPage}>
+                    <div class="flex justify-center pt-3">
+                      <span
+                        class="icon-sm text-muted animate-spin"
+                        innerHTML={ICONS['spinner']}
+                        aria-label="Načítání starších příspěvků"
+                      />
+                    </div>
+                  </Show>
+                  <Show when={!postsQuery.hasNextPage && messages().length > 0}>
+                    <p class="text-center text-xs text-muted pt-3">Začátek diskuze</p>
+                  </Show>
 
-                <Show
-                  when={messages().length > 0}
-                  fallback={
-                    <p class="text-center text-muted py-10">
-                      Zatím žádné příspěvky. Napište první zprávu.
-                    </p>
-                  }
-                >
-                  <For each={items()}>{item => renderItem(item)}</For>
-                </Show>
+                  <Show
+                    when={messages().length > 0}
+                    fallback={
+                      <p class="text-center text-muted py-10">
+                        Zatím žádné příspěvky. Napište první zprávu.
+                      </p>
+                    }
+                  >
+                    <For each={items()}>{item => renderItem(item)}</For>
+                  </Show>
 
-                <Show when={postsQuery.isError}>
-                  <div class="flex flex-col items-center gap-2 py-6">
-                    <p class="text-sm text-danger">
-                      {(postsQuery.error as Error | null)?.message ?? 'Načtení se nezdařilo.'}
-                    </p>
-                    <button class="btn btn-secondary btn-sm" onClick={() => postsQuery.refetch()}>
-                      Zkusit znovu
-                    </button>
-                  </div>
-                </Show>
+                  <Show when={postsQuery.isError}>
+                    <div class="flex flex-col items-center gap-2 py-6">
+                      <p class="text-sm text-danger">
+                        {(postsQuery.error as Error | null)?.message ?? 'Načtení se nezdařilo.'}
+                      </p>
+                      <button class="btn btn-secondary btn-sm" onClick={() => postsQuery.refetch()}>
+                        Zkusit znovu
+                      </button>
+                    </div>
+                  </Show>
+                </div>
               </div>
 
               <Show when={!atBottom()}>
@@ -514,7 +529,7 @@ export default function DiscussionDetailPage() {
                     />
                     <button
                       type="submit"
-                      class="btn btn-primary w-9 h-9 !p-0 rounded-md mb-1 flex-shrink-0"
+                      class="header-btn w-9 h-9 rounded-md mb-1 flex-shrink-0 hover:bg-100 disabled:cursor-not-allowed disabled:opacity-40"
                       disabled={createMutation.isPending || !newPost().trim()}
                       aria-label="Odeslat"
                       title="Odeslat (Enter)"

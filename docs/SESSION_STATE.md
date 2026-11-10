@@ -36,7 +36,9 @@ Design tokens (2026-11-10): the UI is **neutral grey** — `--color-primary` and
 greys (`#495057` / `#343a40` / `#e9ecef`), so buttons, active nav, links and focus rings
 carry no blue. Radii are deliberately tight (`--radius-lg` = 4 px, `--radius-xl` = 6 px);
 circles are reserved for avatars. Status colours (success/warning/danger/info) are
-unchanged and still semantic.
+unchanged and still semantic. **Only buttons with a text label are filled**: icon-only
+controls (send, header, drawer) and the decorative list icons are flat glyphs with a
+hover background at most.
 
 Bundle ≈ **65 kB gzipped** (JS ~47 kB + CSS ~9 kB + vendor ~15 kB).
 
