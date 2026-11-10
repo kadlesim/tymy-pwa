@@ -11,18 +11,20 @@
 import {
   mdilAccount,
   mdilArrowLeft,
-  mdilArrowRightCircle,
   mdilBell,
   mdilCalendar,
-  mdilCancel,
   mdilChartBar,
   mdilCheck,
+  mdilChevronDoubleLeft,
   mdilChevronDown,
   mdilChevronUp,
+  mdilClipboardText,
   mdilClock,
   mdilConsole,
   mdilDelete,
   mdilDotsHorizontal,
+  mdilDownload,
+  mdilFolder,
   mdilFormatBold,
   mdilFormatItalic,
   mdilFormatListBulleted,
@@ -39,7 +41,8 @@ import {
   mdilPencil,
   mdilPlus,
   mdilRefresh,
-  mdilSettings
+  mdilSettings,
+  mdilUpload
 } from '@mdi/light-js/mdil.js'
 
 const icon = (path: string): string =>
@@ -52,10 +55,13 @@ export const ICONS: Record<string, string> = {
   poll: icon(mdilChartBar),
   users: icon(mdilGroup),
   user: icon(mdilAccount),
+  files: icon(mdilFolder),
+  reports: icon(mdilClipboardText),
 
   // Navigation / chrome
   menu: icon(mdilMenu),
   back: icon(mdilArrowLeft),
+  collapse: icon(mdilChevronDoubleLeft),
   chevronDown: icon(mdilChevronDown),
   chevronUp: icon(mdilChevronUp),
   more: icon(mdilDotsHorizontal),
@@ -64,7 +70,7 @@ export const ICONS: Record<string, string> = {
   logout: icon(mdilLogout),
 
   // Chat
-  send: icon(mdilArrowRightCircle),
+  send: icon(mdilUpload),
   attach: icon(mdilPaperclip),
   refresh: icon(mdilRefresh),
 
@@ -78,10 +84,10 @@ export const ICONS: Record<string, string> = {
   link: icon(mdilLink),
 
   // Actions / status
-  close: icon(mdilCancel),
   check: icon(mdilCheck),
   edit: icon(mdilPencil),
   delete: icon(mdilDelete),
+  download: icon(mdilDownload),
   plus: icon(mdilPlus),
   search: icon(mdilMagnify),
   clock: icon(mdilClock),

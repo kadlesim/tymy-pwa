@@ -73,9 +73,12 @@ Errors put the message in **`statusMessage`** (not `message`).
 
 `eventTypes`, `events/withMyAttendance`, `event/{id}`, `event/{id}/history`,
 `discussions/withNew`, `discussion/{id}/bb/{page}`, `polls/menu`, `polls/{id}`,
-`users/status/{status}`, `user/{id}`, `live`, `user_pics/{id}.png`.
+`users/status/{status}`, `user/{id}`, `live`, `user_pics/{id}.png`,
+`event/export/report?year=YYYY&page=N`, `event/export/attendance?from=…&until=…`.
 
-Not available on this host: `captions` (404), `notes/html` (404).
+Not available on this host: `captions` (404), `notes/html` (404), and **any file
+endpoint** — `/files`, `/file`, `/media`, `/documents`, `/attachments` all 404. File
+storage lives only in the legacy server-rendered page `/file` (see §7).
 
 ### Query syntax (works)
 
@@ -126,6 +129,8 @@ src/
 │   ├── polls/          PollsPage, PollDetailPage
 │   ├── users/          UsersPage, UserDetailPage
 │   ├── profile/        ProfilePage, SettingsPage
+│   ├── files/          FilesPage (explains the missing file API, links to legacy /file)
+│   ├── reports/        ReportsPage (players × events attendance matrix + XLSX export)
 │   ├── notes/          NotesPage (implemented, **not routed**)
 │   └── layout/         Layout (header desktop nav + drawer + mobile bottom nav)
 ├── app.tsx             routes + auth guards (incl. loading splash)
@@ -171,6 +176,21 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
   from API flags (`canPlan`, `canWrite`, `canView`, …).
 - **Guards** wait for `initAuth()` (`useIsLoading`) so deep links survive reload.
+- **Session validation** (`src/lib/auth.ts`, `onUnauthorized` in `src/lib/api.ts`):
+  - On start-up a stored session is verified with `GET /user/{id}` *before* the guard
+    lets anyone in; a 401/403 drops the token, the cached user `tymy:user`, the
+    persisted query cache and shows the login page with "Platnost přihlášení vypršela".
+    Network errors keep the session (offline tolerance).
+  - `revalidateSession()` re-checks on `visibilitychange` (throttled to 5 min), so
+    returning to a suspended tab does not start with a 401.
+  - **Any** 401 from the API triggers the same drop via the `onUnauthorized` hook, so
+    an expiry mid-session lands on the login screen instead of erroring on every page.
+- **Sections**: Události, Chat, Ankety, Tým, Soubory, Reporty, Profil. Only the five
+  with `primary: true` are shown in the mobile bottom bar; the other two live in the
+  drawer (7 items would not fit at 390 px).
+- **Reporty** = the legacy "Report docházky": players × events matrix from
+  `events/withMyAttendance` (fetched per year) + `users/status/PLAYER`, plus the official
+  XLSX via `GET /event/export/report?year=…&page=…` (binary, **not** a JSON envelope).
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -209,6 +229,16 @@ smoke test confirmed:
   moving the reader, day dividers correct, no console errors.
 - Still not exercised live: sending a post (avoided posting into the shared dev data).
 
+### 2026-11-10 (sections + session)
+
+- Nav gained **Soubory** (`/files`) and **Reporty** (`/reports`); drawer close is now a
+  chevron-double-left, the chat send glyph is `upload`.
+- Session check verified in Edge: a stale token in `tymy:tsid` + reload of `/events`
+  lands on `/login` with the "Platnost přihlášení vypršela" notice, no console errors.
+- Reports verified live: year auto-selects the newest year with data (2022), matrix shows
+  26 players × 5 events, XLSX export returns a 7 520-byte `PK` zip through the proxy.
+- Files page verified: renders the explanation + link to the legacy `/file` page.
+
 ---
 
 ## 7. Open items / next steps (priority order)
@@ -223,15 +253,17 @@ smoke test confirmed:
 3. **Pagination**: Event lists cap at 40/60 with no “load more”. Discussions now
    load older pages on scroll.
 4. **Notes**: `NotesPage` exists but has no route, and `/notes/html` 404s on dev.
-5. **Poll UX**: `minItems`/`maxItems` not enforced; only filled options are submitted;
+5. **Soubory**: no file API exists (the legacy module is server-rendered). `FilesPage`
+   explains this and links to `/file`; replace it once an endpoint appears.
+6. **Poll UX**: `minItems`/`maxItems` not enforced; only filled options are submitted;
    TEXT/NUMBER semantics could differ from server expectations.
-6. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
+7. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
    Playwright/Vitest browser for login → events → RSVP.
-7. **App icons** are procedural placeholders (`npm run icons`) — replace with real
+8. **App icons** are procedural placeholders (`npm run icons`) — replace with real
    artwork. (The in-app UI icons are already Material Design Light, see §2.)
-8. **Push notifications** need a backend VAPID key + subscription endpoint.
-9. **Production hosting** must serve the app **same-origin with the API** (no CORS) and
-   over HTTPS; SPA fallback to `index.html`.
+9. **Push notifications** need a backend VAPID key + subscription endpoint.
+10. **Production hosting** must serve the app **same-origin with the API** (no CORS) and
+    over HTTPS; SPA fallback to `index.html`.
 
 ---
 
@@ -286,3 +318,9 @@ npm run icons      # regenerate PNG app icons
   `createdBy` used to throw inside the chat's render effect and blank the page. Each chat
   message is now wrapped in a Solid `ErrorBoundary` so one bad record can't take the
   conversation down.
+- **Expired sessions must be handled once, centrally.** Any request can 401; handling it
+  per-screen means every screen needs its own error UI. `onUnauthorized` in `api.ts`
+  fires once and `auth.ts` tears the session down, so the guards do the redirecting.
+- **Binary endpoints break the envelope assumption.** `event/export/*` returns an XLSX
+  (`application/octet-stream`, `PK` magic), not `{status, data}` — use `requestBlob()`,
+  never `request()`.

@@ -99,6 +99,22 @@ export function isAuthenticated(): boolean {
 }
 
 // ============================================
+// Session expiry
+// ============================================
+
+type UnauthorizedListener = () => void
+let unauthorizedListener: UnauthorizedListener | null = null
+
+/**
+ * Registers a single listener invoked whenever the API answers 401. The auth store
+ * uses it to drop the stale session and send the user back to the login screen
+ * instead of letting every screen fill up with "Unauthorized" errors.
+ */
+export function onUnauthorized(listener: UnauthorizedListener): void {
+  unauthorizedListener = listener
+}
+
+// ============================================
 // Core Request Function
 // ============================================
 
@@ -123,6 +139,10 @@ async function requestEnvelope<T>(path: string, init: RequestInit = {}): Promise
     headers,
     credentials: 'include'
   })
+
+  if (response.status === 401) {
+    unauthorizedListener?.()
+  }
 
   let json: ApiResponse<T>
   try {
@@ -153,6 +173,50 @@ export function apiAssetUrl(path?: string): string {
   const origin = (import.meta.env as Record<string, string | undefined>)['VITE_ASSET_ORIGIN'] ?? ''
   const normalised = path.startsWith('/') ? path : `/${path}`
   return `${origin}${normalised}`
+}
+
+// ============================================
+// Binary downloads (XLSX exports)
+// ============================================
+
+async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const tsid = getTSID()
+  const headers = new Headers(init.headers)
+  if (tsid) headers.set('X-Session-Key', tsid)
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+    credentials: 'include'
+  })
+
+  if (response.status === 401) {
+    unauthorizedListener?.()
+    throw new ApiError('Platnost přihlášení vypršela', 401)
+  }
+  if (!response.ok) {
+    throw new ApiError(`Export se nezdařil (HTTP ${response.status})`, response.status)
+  }
+  return response.blob()
+}
+
+/**
+ * Attendance report as an XLSX file (`Event:Export:report`).
+ * Returns the spreadsheet itself, not a JSON envelope.
+ */
+export async function exportEventReport(year: number, page: number = 1): Promise<Blob> {
+  return requestBlob(`/event/export/report?year=${year}&page=${page}`)
+}
+
+/** Flat attendance export (one row per user × event) as XLSX. */
+export async function exportAttendance(
+  from: string,
+  until: string,
+  type?: number
+): Promise<Blob> {
+  const params = new URLSearchParams({ from, until })
+  if (type !== undefined) params.set('type', String(type))
+  return requestBlob(`/event/export/attendance?${params.toString()}`)
 }
 
 // ============================================

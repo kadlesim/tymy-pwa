@@ -1,8 +1,8 @@
 // Login page
 
-import { createSignal } from 'solid-js'
+import { createSignal, Show } from 'solid-js'
 import { useNavigate, useLocation } from '@solidjs/router'
-import { doLogin } from '../../lib/auth'
+import { doLogin, useSessionExpired, clearSessionExpired } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../layout/Layout'
 
@@ -24,6 +24,7 @@ export default function LoginPage() {
   const handleSubmit = async (e: Event) => {
     e.preventDefault()
     setError(null)
+    clearSessionExpired()
     setIsLoading(true)
     
     try {
@@ -56,6 +57,14 @@ export default function LoginPage() {
           <p class="text-muted mt-1">Přihlaste se pro přístup k událostem a chatu</p>
         </div>
         
+        {/* Expired session notice */}
+        <Show when={useSessionExpired()}>
+          <div class="alert mb-4 p-3 rounded-lg bg-warning-light text-warning text-sm flex items-center gap-2 animate-slide-down" role="status">
+            <span class="icon flex-shrink-0" innerHTML={ICONS['clock']} />
+            <span>Platnost přihlášení vypršela. Přihlaste se prosím znovu.</span>
+          </div>
+        </Show>
+
         {/* Error message */}
         {error() && (
           <div class="alert alert-danger mb-4 p-3 rounded-lg bg-danger-light text-danger text-sm flex items-center gap-2 animate-slide-down">

@@ -2,7 +2,7 @@
 
 import { createEffect, onCleanup, Show } from 'solid-js'
 import { Router, Route, Navigate, useLocation, type RouteSectionProps } from '@solidjs/router'
-import { initAuth, useIsAuthenticated, useIsLoading } from './lib/auth'
+import { initAuth, revalidateSession, useIsAuthenticated, useIsLoading } from './lib/auth'
 import { loadCaptions } from './lib/captions'
 import { initPWA, setDeferredPrompt } from './lib/pwa'
 import Layout from './features/layout/Layout'
@@ -21,6 +21,8 @@ import ProfilePage from './features/profile/ProfilePage'
 import SettingsPage from './features/profile/SettingsPage'
 import UsersPage from './features/users/UsersPage'
 import UserDetailPage from './features/users/UserDetailPage'
+import FilesPage from './features/files/FilesPage'
+import ReportsPage from './features/reports/ReportsPage'
 
 // Initialize app on mount
 createEffect(() => {
@@ -34,9 +36,18 @@ createEffect(() => {
     e.preventDefault()
     setDeferredPrompt(e as BeforeInstallPromptEvent)
   }
-  
+
+  // Phones suspend tabs for hours; re-check the session when the app comes back so
+  // the first request after resuming does not hit a 401 with a stale token.
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') void revalidateSession()
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange)
   window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
-  onCleanup(() => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt))
+  onCleanup(() => {
+    window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  })
 })
 
 interface BeforeInstallPromptEvent extends Event {
@@ -118,6 +129,14 @@ export default function App() {
       <Route path="/users" component={PrivateRoute} >
         <Route path="" component={UsersPage} />
         <Route path="/:id" component={UserDetailPage} />
+      </Route>
+
+      <Route path="/files" component={PrivateRoute} >
+        <Route path="" component={FilesPage} />
+      </Route>
+
+      <Route path="/reports" component={PrivateRoute} >
+        <Route path="" component={ReportsPage} />
       </Route>
       
       <Route path="/" component={() => <Navigate href="/events" />} />

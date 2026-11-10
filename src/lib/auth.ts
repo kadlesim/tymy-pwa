@@ -2,7 +2,25 @@
 
 import { createSignal, createEffect, onCleanup } from 'solid-js'
 import { User, UserStatus } from './types'
-import { getTSID, setTSID, clearTSID, getStoredUser, setStoredUser, isAuthenticated, login, logout, loginWithSession, register, requestPasswordReset, resetPassword, apiAssetUrl } from './api'
+import {
+  ApiError,
+  getTSID,
+  setTSID,
+  clearTSID,
+  getStoredUser,
+  setStoredUser,
+  isAuthenticated,
+  login,
+  logout,
+  loginWithSession,
+  register,
+  requestPasswordReset,
+  resetPassword,
+  apiAssetUrl,
+  getUser,
+  onUnauthorized
+} from './api'
+import { queryClient } from './queryClient'
 
 // ============================================
 // Auth Context / Store
@@ -22,6 +40,48 @@ const [authState, setAuthState] = createSignal<AuthState>({
   roles: []
 })
 
+// True when the previous session was rejected by the server (expired / logged out
+// elsewhere). The login screen uses it to explain why the user is back there.
+const [sessionExpired, setSessionExpired] = createSignal(false)
+
+const PERSISTED_CACHE_KEY = 'tymy:query-cache'
+const REVALIDATE_AFTER_MS = 5 * 60 * 1000
+let lastSessionCheck = 0
+
+/** Drops every trace of the current session (token, cached user, persisted queries). */
+function dropSession(expired: boolean): void {
+  clearTSID()
+  try {
+    window.localStorage.removeItem(PERSISTED_CACHE_KEY)
+  } catch {
+    // storage can be unavailable (private mode) – nothing to clean then
+  }
+  queryClient.clear()
+  setAuthState({ user: null, isLoading: false, isAuthenticated: false, roles: [] })
+  setSessionExpired(expired)
+}
+
+// Any 401 from the API means the stored session is no longer usable: forget it and
+// let the route guards take the user to the login screen.
+onUnauthorized(() => dropSession(true))
+
+/**
+ * Asks the API whether the stored session still works.
+ * `true` = valid, `false` = rejected (401/403), `null` = could not tell (offline).
+ */
+async function verifySession(userId: number): Promise<boolean | null> {
+  try {
+    const user = await getUser(userId)
+    if (user) setStoredUser(user)
+    return true
+  } catch (error) {
+    if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+      return false
+    }
+    return null
+  }
+}
+
 // ============================================
 // Initialize Auth on App Start
 // ============================================
@@ -31,16 +91,23 @@ export async function initAuth(): Promise<void> {
 
   try {
     // Restore a stored session first (the session cookie is HttpOnly and cannot
-    // be read from JS, so the stored user is our source of truth).
+    // be read from JS, so the stored user is our source of truth) — but ask the API
+    // whether that session still exists before trusting it.
     if (isAuthenticated()) {
       const user = getStoredUser()
       if (user) {
-        setAuthState({
-          user,
-          isLoading: false,
-          isAuthenticated: true,
-          roles: user.roles
-        })
+        const valid = await verifySession(user.id)
+        lastSessionCheck = Date.now()
+        if (valid !== false) {
+          setAuthState({
+            user,
+            isLoading: false,
+            isAuthenticated: true,
+            roles: user.roles
+          })
+        } else {
+          dropSession(true)
+        }
         return
       }
     }
@@ -66,6 +133,29 @@ export async function initAuth(): Promise<void> {
   }
 }
 
+/**
+ * Re-checks the session after the app has been in the background (phones suspend
+ * tabs for hours) so the next API call does not fail with 401.
+ * Throttled to one request per `REVALIDATE_AFTER_MS`.
+ */
+export async function revalidateSession(): Promise<void> {
+  const state = authState()
+  if (!state.isAuthenticated || !state.user) return
+  if (Date.now() - lastSessionCheck < REVALIDATE_AFTER_MS) return
+  lastSessionCheck = Date.now()
+
+  const valid = await verifySession(state.user.id)
+  if (valid === false) dropSession(true)
+}
+
+export function useSessionExpired(): boolean {
+  return sessionExpired()
+}
+
+export function clearSessionExpired(): void {
+  setSessionExpired(false)
+}
+
 // ============================================
 // Public Auth Actions
 // ============================================
@@ -74,6 +164,8 @@ export async function doLogin(loginName: string, password: string): Promise<User
   setAuthState(prev => ({ ...prev, isLoading: true }))
   try {
     const response = await login({ login: loginName, password })
+    lastSessionCheck = Date.now()
+    clearSessionExpired()
     setAuthState({
       user: response.data,
       isLoading: false,
@@ -111,13 +203,10 @@ export async function doLogout(): Promise<void> {
   setAuthState(prev => ({ ...prev, isLoading: true }))
   try {
     await logout()
+  } catch (error) {
+    console.warn('Logout request failed:', error)
   } finally {
-    setAuthState({
-      user: null,
-      isLoading: false,
-      isAuthenticated: false,
-      roles: []
-    })
+    dropSession(false)
   }
 }
 

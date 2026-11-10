@@ -12,14 +12,18 @@ interface NavItem {
   path: string
   label: string
   icon: string
+  /** Shown in the mobile bottom bar; secondary sections live in the drawer only. */
+  primary?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/events', label: 'Události', icon: 'calendar' },
-  { path: '/discussions', label: 'Chat', icon: 'chat' },
-  { path: '/polls', label: 'Ankety', icon: 'poll' },
-  { path: '/users', label: 'Tým', icon: 'users' },
-  { path: '/profile', label: 'Profil', icon: 'user' }
+  { path: '/events', label: 'Události', icon: 'calendar', primary: true },
+  { path: '/discussions', label: 'Chat', icon: 'chat', primary: true },
+  { path: '/polls', label: 'Ankety', icon: 'poll', primary: true },
+  { path: '/users', label: 'Tým', icon: 'users', primary: true },
+  { path: '/files', label: 'Soubory', icon: 'files' },
+  { path: '/reports', label: 'Reporty', icon: 'reports' },
+  { path: '/profile', label: 'Profil', icon: 'user', primary: true }
 ]
 
 export interface LayoutProps {
@@ -37,6 +41,7 @@ export default function Layout(props: LayoutProps) {
   // Every authenticated team member can reach these core sections.
   // Fine-grained permissions (canPlan, canWrite, …) are enforced per action.
   const visibleNavItems = createMemo(() => (auth().user ? NAV_ITEMS : []))
+  const bottomNavItems = createMemo(() => visibleNavItems().filter(item => item.primary))
 
   createEffect(() => {
     location.pathname
@@ -198,7 +203,7 @@ export default function Layout(props: LayoutProps) {
               onClick={() => setSidebarOpen(false)}
               aria-label="Zavřít menu"
             >
-              <span class="icon" innerHTML={ICONS['close']} />
+              <span class="icon" innerHTML={ICONS['collapse']} />
             </button>
           </div>
 
@@ -245,7 +250,7 @@ export default function Layout(props: LayoutProps) {
       {/* Bottom navigation (mobile) */}
       <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden" role="navigation" aria-label="Hlavní navigace">
         <ul class="flex h-full items-stretch justify-around" role="list">
-          {visibleNavItems().map(item => (
+          {bottomNavItems().map(item => (
             <li class="flex-1 min-w-0">
               <A
                 href={item.path}
