@@ -7,6 +7,39 @@ earlier pitfalls. Keep this file current when significant things change.
 
 ---
 
+## 0. Where we left off (resume here)
+
+**Everything below is committed; the working tree is clean.**
+Latest commit: `5beec47` — event detail RSVP note + grouped attendance.
+
+State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
+
+- Sections: Události, Chat, Ankety, Tým, Soubory, Reporty, Profil.
+- **Events**: list (closest first, `order=startTime__asc`), month grid, "Nevyplněná
+  docházka" tab with count, detail with icon-only edit/delete, RSVP + note, attendance
+  grouped by answer (§5).
+- **Chat**: bottom composer, newest at the bottom, older pages on scroll-up, per-message
+  hover menu (react/copy/edit/pin/delete) with server-mirroring rights.
+- **Chat view is intentionally borderless**; **UI is neutral grey**, tight radii, MDI Light
+  icons only (no emoji) (§2).
+- **Team selection** before login (`/team`), **central session validation** (§5).
+- **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
+
+**Open decision — deployment (nothing implemented yet).** The API has no CORS, so the
+bundle must be served together with a same-origin proxy for `/api/*` and `/user_pics/*`
+that turns `X-Session-Key` into a `Cookie: PHPSESSID=…`. Options discussed: **Cloudflare
+Pages + one Pages Function** (fastest, free, recommended), Netlify/Vercel + function,
+VPS + Caddy, or serving `dist/` from the tymy server itself (best long-term, needs the
+tymy admin). Static-only hosts (GitHub Pages) cannot work. Also to settle for prod:
+one deployment per team vs. mapping `X-Team-Subdomain` in the proxy, `VITE_ASSET_ORIGIN`,
+and switching the workbox `/api/` route from `StaleWhileRevalidate` to `NetworkOnly`.
+
+**Next likely tasks** (see §7 for the full list): deploy, then verify the remaining write
+endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`, `POST /user/{id}/avatar`,
+`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`).
+
+---
+
 ## 1. What this project is
 
 A Progressive Web App for sports-team management built on the existing **Tymy REST
@@ -14,8 +47,8 @@ API**. Client-only SPA; no backend code lives here.
 
 Repo: `C:\devel\tymy-pwa` · API spec: `tymy.apib` (API Blueprint, vendor docs).
 
-Sections: **Events** (RSVP), **Discussions** (BBCode chat), **Polls**, **Roster**,
-**Profile/Settings**.
+Sections: **Events** (RSVP), **Chat/Discussions** (BBCode, chat view), **Polls**,
+**Roster**, **Soubory**, **Reporty**, **Profile/Settings**.
 
 ---
 
@@ -100,6 +133,8 @@ storage lives only in the legacy server-rendered page `/file` (see §7).
 - `eventTypes[].preStatusSet[]` carries `code`, `caption`, `icon` and `color`
   (raw RGB hex, no `#`) — the UI uses those colours.
 - **Dev dataset:** events span **2013 → 2022**, so “Upcoming” is legitimately empty.
+  On **pd.tymy.cz** there is real data (hundreds of upcoming trainings/events, 175
+  attendance entries on one event) — use the `/team` screen with `pd` to test there.
 - **Discussion pages are newest-first:** `/discussion/{id}/bb/{page}` returns ~20 posts in
   *descending* order, page 1 = newest, last page = oldest (verified on discussion 1:
   127 posts, 7 pages). The Blueprint example is misleading.
@@ -127,9 +162,10 @@ src/
 │   └── types.ts        API types aligned to live payloads
 ├── features/
 │   ├── auth/           TeamPage, Login, Register, ForgotPassword, ResetPassword
-│   ├── events/         EventsPage, EventDetailPage, EventCreatePage,
-│   │                   EventHeader, EventRsvp, EventAttendance, EventLink, constants
-│   ├── discussions/    DiscussionsPage, DiscussionDetailPage
+│   ├── events/         EventsPage, EventDetailPage, EventCreatePage (also edit),
+│   │                   EventMonthView, EventHeader, EventRsvp, EventAttendance,
+│   │                   EventLink, constants
+│   ├── discussions/    DiscussionsPage, DiscussionDetailPage, ChatMessage
 │   ├── polls/          PollsPage, PollDetailPage
 │   ├── users/          UsersPage, UserDetailPage
 │   ├── profile/        ProfilePage, SettingsPage
@@ -320,8 +356,8 @@ smoke test confirmed:
    URL segment is the **discussion** id, post id goes in the body
    (`PUT|DELETE /discussions/{discussionId}/post`) — the old helpers were wrong-shaped
    and have been fixed. Reactions use `/discussions/{id}/post/{postId}/react`.
-3. **Pagination**: Event lists cap at 40/60 with no “load more”. Discussions now
-   load older pages on scroll.
+3. **Pagination**: Past events cap at 40 and pending at 100 with no “load more”.
+   Discussions already load older pages on scroll.
 4. **Notes**: `NotesPage` exists but has no route, and `/notes/html` 404s on dev.
 5. **Soubory**: no file API exists (the legacy module is server-rendered). `FilesPage`
    explains this and links to `/file`; replace it once an endpoint appears.
@@ -332,8 +368,12 @@ smoke test confirmed:
 8. **App icons** are procedural placeholders (`npm run icons`) — replace with real
    artwork. (The in-app UI icons are already Material Design Light, see §2.)
 9. **Push notifications** need a backend VAPID key + subscription endpoint.
-10. **Production hosting** must serve the app **same-origin with the API** (no CORS) and
-    over HTTPS; SPA fallback to `index.html`.
+10. **Production hosting** — see §0. The app must be served **same-origin with the API**
+    (no CORS), over HTTPS, with SPA fallback and a proxy that turns `X-Session-Key` into
+    `Cookie: PHPSESSID=…`. Nothing is deployed yet; Cloudflare Pages + one Pages Function
+    is the recommended first step.
+11. **Legacy typo**: the first events tab uses the caption `Přicházející`
+    (`captions.ts:45`, `EventHeader.tsx:16`); the usual Czech is `Nadcházející`.
 
 ---
 
