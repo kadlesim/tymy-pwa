@@ -25,12 +25,14 @@ function statusLabel(status: string): string {
 export interface EventHeaderProps {
   event: Event
   canPlan: boolean
+  onEdit: () => void
   onDelete: () => void
 }
 
 export default function EventHeader(props: EventHeaderProps) {
   const color = () => TYPE_COLORS[props.event.type] || 'primary'
   const status = () => getEventStatus(props.event)
+  const canEdit = () => props.canPlan && (props.event.canPlan || props.event.canPlanOthers)
 
   return (
     <div class="event-header mb-4">
@@ -70,11 +72,31 @@ export default function EventHeader(props: EventHeaderProps) {
           </div>
         </div>
 
-        <Show when={props.canPlan}>
-          <button class="btn btn-danger flex-shrink-0" onClick={props.onDelete}>
-            Smazat
-          </button>
-        </Show>
+        {/* Icon-only actions, shown only when the user may actually change the event. */}
+        <div class="flex items-center gap-1 flex-shrink-0">
+          <Show when={canEdit()}>
+            <button
+              type="button"
+              class="header-btn p-2 rounded-md hover:bg-100"
+              onClick={props.onEdit}
+              title="Upravit událost"
+              aria-label="Upravit událost"
+            >
+              <span class="icon" innerHTML={ICONS['edit']} />
+            </button>
+          </Show>
+          <Show when={canEdit()}>
+            <button
+              type="button"
+              class="header-btn p-2 rounded-md hover:bg-danger-light hover:text-danger"
+              onClick={props.onDelete}
+              title="Smazat událost"
+              aria-label="Smazat událost"
+            >
+              <span class="icon" innerHTML={ICONS['delete']} />
+            </button>
+          </Show>
+        </div>
       </div>
 
       <Show when={props.event.description}>

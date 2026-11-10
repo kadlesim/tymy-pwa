@@ -189,7 +189,8 @@ export default defineConfig({
       },
       '/user_pics': {
         // Avatars and uploads; the team travels as a query parameter (`?team=…`)
-        // because an <img> cannot send the custom header.
+        // because an <img> cannot send the custom header. The parameter is left in
+        // place — Vite would otherwise rewrite it away before we could read it.
         target: 'https://dev.tymy.cz',
         changeOrigin: true,
         secure: true,
@@ -200,8 +201,7 @@ export default defineConfig({
               proxyReq.setHeader('host', `${team}.tymy.cz`)
             }
           })
-        },
-        rewrite: (path: string) => path.replace(/[?&]team=[^&]*/, '').replace(/\?$/, '')
+        }
       }
     }
   }

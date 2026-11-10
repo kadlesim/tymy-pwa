@@ -124,6 +124,7 @@ export default function App() {
       <Route path="/events" component={PrivateRoute} >
         <Route path="" component={EventsPage} />
         <Route path="/:id" component={EventDetailPage} />
+        <Route path="/:id/edit" component={EventCreatePage} />
         <Route path="/create" component={EventCreatePage} />
       </Route>
       

@@ -109,6 +109,7 @@ export default function EventDetailPage() {
               <EventHeader
                 event={event()}
                 canPlan={!!event().canPlan}
+                onEdit={() => navigate(`/events/${event().id}/edit`)}
                 onDelete={handleDelete}
               />
 

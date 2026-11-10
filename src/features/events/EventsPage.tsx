@@ -1,4 +1,5 @@
-// Events page - list with filtering and optimistic RSVP
+// Events page - list (closest first) or month grid, per-tab server queries,
+// pending-attendance tab and optimistic RSVP.
 
 import { createSignal, createMemo, For, Show } from 'solid-js'
 import { useNavigate } from '@solidjs/router'
@@ -18,8 +19,10 @@ import { useAuth } from '../../lib/auth'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
 import { STATUS_COLORS, STATUS_LABELS } from './constants'
+import EventMonthView from './EventMonthView'
 
-type EventFilter = 'upcoming' | 'past' | 'my'
+type EventTab = 'upcoming' | 'past' | 'pending'
+type EventsView = 'list' | 'month'
 
 const TYPE_ICON: Record<string, string> = {
   TRA: 'calendar',
@@ -37,37 +40,53 @@ const TYPE_COLOR: Record<string, string> = {
   CMP: 'danger'
 }
 
+const PENDING_KEY = queryKeys.eventsWithAttendance('pending')
+
 export default function EventsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const auth = useAuth()
   const { tEvents, tCommon } = useCommonCaptions()
 
-  const [filter, setFilter] = createSignal<EventFilter>('upcoming')
+  const [tab, setTab] = createSignal<EventTab>('upcoming')
+  const [view, setView] = createSignal<EventsView>('list')
   const [selectedType, setSelectedType] = createSignal<string>('all')
+  const [visibleMonth, setVisibleMonth] = createSignal(
+    new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  )
 
   // Per-tab server-side queries keep payloads small and results accurate.
-  const eventQueryOptions = (): EventsQueryOptions => {
+  // NOTE: this server sorts descending by default; ascending needs the `__asc` suffix.
+  const listQueryOptions = (): EventsQueryOptions => {
     const now = new Date()
-    switch (filter()) {
-      case 'upcoming':
-        return { filters: [{ field: 'startTime', operator: '>=', value: now }], order: 'startTime' }
-      case 'past':
-        return {
-          filters: [{ field: 'endTime', operator: '<', value: now }],
-          order: 'startTime__desc',
-          limit: 40
-        }
-      case 'my':
-      default:
-        return { order: 'startTime__desc', limit: 60 }
+    if (tab() === 'past') {
+      return {
+        filters: [{ field: 'endTime', operator: '<', value: now }],
+        order: 'startTime__desc',
+        limit: 40
+      }
     }
+    return { filters: [{ field: 'startTime', operator: '>=', value: now }], order: 'startTime__asc' }
   }
 
   const eventsQuery = useQuery<Event[], Error>(() => ({
-    queryKey: queryKeys.eventsWithAttendance(filter()),
-    queryFn: () => getEventsWithMyAttendance(eventQueryOptions()),
-    staleTime: 1000 * 60 * 2
+    queryKey: queryKeys.eventsWithAttendance(tab() === 'pending' ? 'pending' : tab()),
+    queryFn: () => getEventsWithMyAttendance(listQueryOptions()),
+    staleTime: 1000 * 60 * 2,
+    enabled: tab() !== 'pending'
+  }))
+
+  // Unanswered RSVPs: running events and later that are still open for sign-up.
+  const pendingQuery = useQuery<Event[], Error>(() => ({
+    queryKey: PENDING_KEY,
+    queryFn: () =>
+      getEventsWithMyAttendance({
+        filters: [{ field: 'endTime', operator: '>=', value: new Date() }],
+        order: 'startTime__asc',
+        limit: 100
+      }),
+    staleTime: 1000 * 60 * 2,
+    enabled: tab() === 'pending' || auth().user !== null
   }))
 
   const eventTypesQuery = useQuery<EventType[], Error>(() => ({
@@ -75,6 +94,48 @@ export default function EventsPage() {
     queryFn: getEventTypes,
     staleTime: 1000 * 60 * 60
   }))
+
+  // Visible month for the calendar grid.
+  const monthQuery = useQuery<Event[], Error>(() => ({
+    queryKey: ['events', 'month', visibleMonth().toISOString()],
+    queryFn: () => {
+      const start = visibleMonth()
+      return getEventsWithMyAttendance({
+        filters: [
+          { field: 'startTime', operator: '>=', value: new Date(Date.UTC(start.getFullYear(), start.getMonth(), 1)) },
+          {
+            field: 'startTime',
+            operator: '<=',
+            value: new Date(Date.UTC(start.getFullYear(), start.getMonth() + 1, 0, 23, 59, 59))
+          }
+        ],
+        order: 'startTime__asc'
+      })
+    },
+    staleTime: 1000 * 60 * 2,
+    enabled: view() === 'month'
+  }))
+
+  const eventTypes = () => eventTypesQuery.data ?? []
+
+  const statusOptionsFor = (event: Event): AttendanceStatus[] => {
+    const type = eventTypes().find(t => t.code === event.type)
+    return type?.preStatusSet ?? []
+  }
+
+  // The API has no `myAttendance`; derive it from the attendance array.
+  const myStatusOf = (event: Event): string | undefined =>
+    event.myAttendance?.preStatus ??
+    event.attendance?.find(a => a.userId === auth().user?.id)?.preStatus ??
+    undefined
+
+  // Not answered yet = still open for sign-up and no status of mine.
+  const pendingEvents = createMemo(() => {
+    const now = new Date()
+    return (pendingQuery.data ?? []).filter(
+      event => new Date(event.closeTime) >= now && !myStatusOf(event)
+    )
+  })
 
   const rsvpMutation = useMutation<
     void,
@@ -92,11 +153,11 @@ export default function EventsPage() {
         }
       ]),
     onMutate: async ({ eventId, status }) => {
-      const key = queryKeys.eventsWithAttendance(filter())
+      const key = queryKeys.eventsWithAttendance(tab() === 'pending' ? 'pending' : tab())
       await queryClient.cancelQueries({ queryKey: key })
       const previous = queryClient.getQueryData<Event[]>(key)
-      queryClient.setQueryData<Event[]>(key, old =>
-        (old ?? []).map(e =>
+      const patch = (events: Event[] | undefined) =>
+        (events ?? []).map(e =>
           e.id === eventId
             ? {
                 ...e,
@@ -111,7 +172,8 @@ export default function EventsPage() {
               }
             : e
         )
-      )
+      queryClient.setQueryData<Event[]>(key, old => patch(old))
+      queryClient.setQueryData<Event[]>(PENDING_KEY, old => patch(old))
       return { previous, key }
     },
     onError: (_err, _vars, ctx) => {
@@ -124,33 +186,24 @@ export default function EventsPage() {
     }
   }))
 
-  const eventTypes = () => eventTypesQuery.data ?? []
-  const events = () => eventsQuery.data ?? []
-
-  const statusOptionsFor = (event: Event): AttendanceStatus[] => {
-    const type = eventTypes().find(t => t.code === event.type)
-    return type?.preStatusSet ?? []
-  }
-
-  // The API has no `myAttendance`; derive it from the attendance array.
-  const myStatusOf = (event: Event): string | undefined =>
-    event.myAttendance?.preStatus ??
-    event.attendance?.find(a => a.userId === auth().user?.id)?.preStatus ??
-    undefined
+  const baseEvents = () => (tab() === 'pending' ? pendingEvents() : eventsQuery.data ?? [])
 
   const filteredEvents = createMemo(() => {
-    // Date windows are applied server-side; only type and "mine" are client-side.
-    let result = [...events()]
-
-    if (filter() === 'my') {
-      result = result.filter(e => !!myStatusOf(e))
-    }
-
+    let result = [...baseEvents()]
     if (selectedType() !== 'all') {
       result = result.filter(e => e.type === selectedType())
     }
-
+    // List is always "closest to now first": upcoming ascending, past descending.
+    result.sort((a, b) => {
+      const diff = new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      return tab() === 'past' ? -diff : diff
+    })
     return result
+  })
+
+  const monthEvents = createMemo(() => {
+    const list = monthQuery.data ?? []
+    return selectedType() === 'all' ? list : list.filter(e => e.type === selectedType())
   })
 
   const groupedEvents = createMemo(() => {
@@ -164,37 +217,81 @@ export default function EventsPage() {
     return Array.from(groups.entries()).map(([date, dayEvents]) => ({ date, events: dayEvents }))
   })
 
+  const loading = () => (tab() === 'pending' ? pendingQuery.isPending : eventsQuery.isPending)
+  const failed = () => (tab() === 'pending' ? pendingQuery.isError : eventsQuery.isError)
+
   return (
     <div class="events-page">
-      <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div class="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
         <h1 class="text-xl font-semibold text-text">{tEvents('title')}</h1>
 
         <div class="flex flex-wrap items-center gap-2">
           <div class="flex gap-1 bg-100 rounded-lg p-1" role="tablist">
             <For each={[
-              { value: 'upcoming' as EventFilter, label: tEvents('upcoming') },
-              { value: 'past' as EventFilter, label: tEvents('past') },
-              { value: 'my' as EventFilter, label: tEvents('myEvents') }
+              { value: 'upcoming' as EventTab, label: tEvents('upcoming') },
+              { value: 'pending' as EventTab, label: 'Nevyplněná docházka' },
+              { value: 'past' as EventTab, label: tEvents('past') }
             ]}>
-              {(tab) => (
+              {(item) => (
                 <button
                   role="tab"
-                  aria-selected={filter() === tab.value}
-                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  aria-selected={tab() === item.value}
+                  class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1.5"
                   classList={{
-                    'bg-white text-primary shadow-sm': filter() === tab.value,
-                    'text-text-secondary hover:text-text': filter() !== tab.value
+                    'bg-white text-primary shadow-sm': tab() === item.value,
+                    'text-text-secondary hover:text-text': tab() !== item.value
                   }}
-                  onClick={() => setFilter(tab.value)}
+                  onClick={() => setTab(item.value)}
                 >
-                  {tab.label}
+                  {item.label}
+                  <Show when={item.value === 'pending' && pendingEvents().length > 0}>
+                    <span
+                      class="badge text-[11px] px-1.5 py-0"
+                      classList={{
+                        'bg-danger text-white': tab() === item.value,
+                        'bg-danger-light text-danger': tab() !== item.value
+                      }}
+                    >
+                      {pendingEvents().length}
+                    </span>
+                  </Show>
                 </button>
               )}
             </For>
           </div>
 
+          <div class="flex gap-1 bg-100 rounded-lg p-1" role="group" aria-label="Zobrazení">
+            <button
+              type="button"
+              class="px-2 py-1.5 rounded-md"
+              classList={{
+                'bg-white text-primary shadow-sm': view() === 'list',
+                'text-text-secondary hover:text-text': view() !== 'list'
+              }}
+              aria-pressed={view() === 'list'}
+              onClick={() => setView('list')}
+              title="Seznam"
+            >
+              <span class="icon-sm" innerHTML={ICONS['list']} />
+            </button>
+            <button
+              type="button"
+              class="px-2 py-1.5 rounded-md"
+              classList={{
+                'bg-white text-primary shadow-sm': view() === 'month',
+                'text-text-secondary hover:text-text': view() !== 'month'
+              }}
+              aria-pressed={view() === 'month'}
+              onClick={() => setView('month')}
+              title="Kalendář"
+            >
+              <span class="icon-sm" innerHTML={ICONS['calendar']} />
+            </button>
+          </div>
+
           <select
             class="input py-2 px-3 text-sm"
+            style="width: auto"
             value={selectedType()}
             onChange={e => setSelectedType(e.currentTarget.value)}
           >
@@ -206,77 +303,97 @@ export default function EventsPage() {
         </div>
       </div>
 
-      <Show
-        when={!eventsQuery.isPending}
-        fallback={
-          <div class="flex items-center justify-center h-64">
-            <div class="flex flex-col items-center gap-4">
-              <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} />
-              <p class="text-muted">{tCommon('loading')}</p>
-            </div>
-          </div>
-        }
-      >
+      <Show when={view() === 'month'}>
         <Show
-          when={!eventsQuery.isError}
+          when={!monthQuery.isPending}
           fallback={
-            <div class="text-center p-8">
-              <p class="text-danger mb-4">Chyba při načítání událostí.</p>
-              <button class="btn btn-primary" onClick={() => eventsQuery.refetch()}>
-                {tCommon('retry')}
-              </button>
+            <div class="flex items-center justify-center h-64">
+              <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} />
+            </div>
+          }
+        >
+          <EventMonthView
+            month={visibleMonth()}
+            events={monthEvents()}
+            onOpen={id => navigate(`/events/${id}`)}
+            onMonthChange={setVisibleMonth}
+          />
+        </Show>
+      </Show>
+
+      <Show when={view() === 'list'}>
+        <Show
+          when={!loading()}
+          fallback={
+            <div class="flex items-center justify-center h-64">
+              <div class="flex flex-col items-center gap-4">
+                <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} />
+                <p class="text-muted">{tCommon('loading')}</p>
+              </div>
             </div>
           }
         >
           <Show
-            when={groupedEvents().length > 0}
+            when={!failed()}
             fallback={
-              <div class="text-center py-12">
-                <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['calendar']} />
-                <h3 class="text-lg font-medium text-text mb-1">Žádné události</h3>
-                <p class="text-muted">
-                  {filter() === 'upcoming'
-                    ? 'Zatím nejsou naplánované žádné události.'
-                    : filter() === 'past'
-                      ? 'Zatím nejsou žádné minulé události.'
-                      : 'Nemáte potvrzenou účast na žádné události.'}
-                </p>
-                <Show when={filter() === 'upcoming'}>
-                  <button class="btn btn-secondary mt-4" onClick={() => setFilter('past')}>
-                    Zobrazit minulé události
-                  </button>
-                </Show>
+              <div class="text-center p-8">
+                <p class="text-danger mb-4">Chyba při načítání událostí.</p>
+                <button class="btn btn-primary" onClick={() => eventsQuery.refetch()}>
+                  {tCommon('retry')}
+                </button>
               </div>
             }
           >
-            <div class="space-y-6">
-              <For each={groupedEvents()}>
-                {(group) => (
-                  <div>
-                    <div class="flex items-center gap-3 mb-3">
-                      <div class="flex-1 h-px bg-border" />
-                      <span class="text-sm font-medium text-text-secondary px-3">{group.date}</span>
-                      <div class="flex-1 h-px bg-border" />
-                    </div>
+            <Show
+              when={groupedEvents().length > 0}
+              fallback={
+                <div class="text-center py-12">
+                  <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['calendar']} />
+                  <h3 class="text-lg font-medium text-text mb-1">Žádné události</h3>
+                  <p class="text-muted">
+                    {tab() === 'upcoming'
+                      ? 'Zatím nejsou naplánované žádné události.'
+                      : tab() === 'past'
+                        ? 'Zatím nejsou žádné minulé události.'
+                        : 'Máte vyplněnou docházku na všechny otevřené události.'}
+                  </p>
+                  <Show when={tab() === 'upcoming'}>
+                    <button class="btn btn-secondary mt-4" onClick={() => setTab('past')}>
+                      Zobrazit minulé události
+                    </button>
+                  </Show>
+                </div>
+              }
+            >
+              <div class="space-y-6">
+                <For each={groupedEvents()}>
+                  {(group) => (
+                    <div>
+                      <div class="flex items-center gap-3 mb-3">
+                        <div class="flex-1 h-px bg-border" />
+                        <span class="text-sm font-medium text-text-secondary px-3">{group.date}</span>
+                        <div class="flex-1 h-px bg-border" />
+                      </div>
 
-                    <div class="space-y-2">
-                      <For each={group.events}>
-                        {(event) => (
-                          <EventCard
-                            event={event}
-                            statusOptions={statusOptionsFor(event)}
-                            myStatus={myStatusOf(event)}
-                            isPending={rsvpMutation.isPending}
-                            onOpen={() => navigate(`/events/${event.id}`)}
-                            onRsvp={(status) => rsvpMutation.mutate({ eventId: event.id, status })}
-                          />
-                        )}
-                      </For>
+                      <div class="space-y-2">
+                        <For each={group.events}>
+                          {(event) => (
+                            <EventCard
+                              event={event}
+                              statusOptions={statusOptionsFor(event)}
+                              myStatus={myStatusOf(event)}
+                              isPending={rsvpMutation.isPending}
+                              onOpen={() => navigate(`/events/${event.id}`)}
+                              onRsvp={(status) => rsvpMutation.mutate({ eventId: event.id, status })}
+                            />
+                          )}
+                        </For>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </For>
-            </div>
+                  )}
+                </For>
+              </div>
+            </Show>
           </Show>
         </Show>
       </Show>

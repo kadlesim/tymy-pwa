@@ -82,11 +82,14 @@ storage lives only in the legacy server-rendered page `/file` (see §7).
 
 ### Query syntax (works)
 
-`?filter=endTime<20261109000000&order=startTime__desc&limit=40`
+`?filter=endTime<20261109000000&order=startTime__asc&limit=40`
 - operators: `>`, `<`, `=`, `!=`, `>=`, `<=`
 - multiple conditions joined by `~`
 - dates as `YYYYMMDDHHmmss` (UTC, produced by `formatFilterValue`)
-- order `<field>` asc / `<field>__desc`
+- **sorting: a bare field name sorts DESCENDING** (verified on pd.tymy.cz:
+  `order=startTime` and `order=startTime__desc` both return the newest first).
+  Ascending needs the explicit `__asc` suffix: `order=startTime__asc`.
+  Same for `id`.
 
 ### Data quirks
 
@@ -147,10 +150,17 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 ## 5. Behaviour decisions worth remembering
 
 - **Events list = one server query per tab:**
-  - Upcoming: `startTime >= now`, order `startTime`
+  - Upcoming: `startTime >= now`, order `startTime__asc` (closest first)
+  - Pending attendance ("Nevyplněná docházka"): `endTime >= now`, order `startTime__asc`,
+    then client-filtered to `closeTime >= now` and no own `preStatus`; the tab shows the
+    count. Its query runs independently so the badge is right on every tab.
   - Past: `endTime < now`, order `startTime__desc`, **limit 40**
-  - Mine: order `startTime__desc`, **limit 60**, filtered client-side by derived RSVP
   - Empty “Upcoming” shows a button that switches to “Past”.
+- **Events view switch**: list (grouped by day, closest to now first) or a Google-Calendar
+  style month grid (`EventMonthView`) with month navigation, today highlighted and event
+  pills that open `/events/:id`. The grid queries the visible month only.
+- **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
+  only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
 - **RSVP** uses optimistic cache updates on the active tab key; payload
   `[{userId: <me>, eventId, preStatus, preDescription}]`.
 - **Discussion detail = chat view** (`DiscussionDetailPage`):
@@ -267,6 +277,14 @@ smoke test confirmed:
   → "Tým „nope12345.tymy.cz“ nebyl nalezen.", `dev` → `/login` (shows `dev.tymy.cz` +
   "změnit tým"), login → `/events`, reload while logged in skips `/team`, logout and a
   stale token both land on `/team`.
+- **Events verified against pd.tymy.cz** (real team, same account): upcoming list now
+  starts with the nearest event (11. 11. 2026 → 16. 11. → 18. 11. → 21. 11.) instead of
+  2027; the "Nevyplněná docházka" tab shows a live count (49) and its list; the month grid
+  renders November 2026 with 14 event pills and opens `/events/{id}` when clicked; the
+  detail header shows only the pencil and trash icons (no text) and `/events/:id/edit`
+  renders the prefilled form.
+- Team-aware avatars: the `/user_pics` proxy keeps `?team=…` (Vite's `rewrite` ran before
+  we could read it, so every avatar fell back to the wrong host).
 - All `⏳` / `✓` glyphs replaced with MDI icons (splash, page loaders, button spinners,
   success screens).
 
