@@ -1,0 +1,265 @@
+﻿// Main layout with header, bottom navigation, and responsive sidebar
+
+import { createSignal, createMemo, createEffect, onCleanup } from 'solid-js'
+import { useLocation, useNavigate, A } from '@solidjs/router'
+import { useAuth, doLogout, getDisplayName, getUserAvatar } from '../../lib/auth'
+import { useCommonCaptions } from '../../lib/captions'
+import { ICONS } from '../../lib/icons'
+
+export { ICONS }
+
+interface NavItem {
+  path: string
+  label: string
+  icon: string
+}
+
+const NAV_ITEMS: NavItem[] = [
+  { path: '/events', label: 'Události', icon: 'calendar' },
+  { path: '/discussions', label: 'Chat', icon: 'chat' },
+  { path: '/polls', label: 'Ankety', icon: 'poll' },
+  { path: '/users', label: 'Tým', icon: 'users' },
+  { path: '/profile', label: 'Profil', icon: 'user' }
+]
+
+export interface LayoutProps {
+  children?: any
+}
+
+export default function Layout(props: LayoutProps) {
+  const location = useLocation()
+  const navigate = useNavigate()
+  const auth = useAuth()
+  const { tAuth } = useCommonCaptions()
+  const [sidebarOpen, setSidebarOpen] = createSignal(false)
+  const [userMenuOpen, setUserMenuOpen] = createSignal(false)
+
+  // Every authenticated team member can reach these core sections.
+  // Fine-grained permissions (canPlan, canWrite, …) are enforced per action.
+  const visibleNavItems = createMemo(() => (auth().user ? NAV_ITEMS : []))
+
+  createEffect(() => {
+    location.pathname
+    setSidebarOpen(false)
+  })
+
+  const handleClickOutside = (e: MouseEvent) => {
+    const path = e.composedPath() as Array<Element | Window>
+
+    // Clicks on a menu toggle must not immediately re-close the menu.
+    const isToggle = path.some(el => el instanceof HTMLElement && el.dataset['toggle'] !== undefined)
+    if (isToggle) return
+
+    const inSidebar = path.some(el => el instanceof Element && el.classList?.contains('sidebar'))
+    const inUserMenu = path.some(el => el instanceof Element && el.classList?.contains('user-menu'))
+
+    if (sidebarOpen() && !inSidebar) setSidebarOpen(false)
+    if (userMenuOpen() && !inUserMenu) setUserMenuOpen(false)
+  }
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setSidebarOpen(false)
+      setUserMenuOpen(false)
+    }
+  }
+
+  createEffect(() => {
+    document.addEventListener('click', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    onCleanup(() => {
+      document.removeEventListener('click', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    })
+  })
+
+  const handleLogout = async () => {
+    setUserMenuOpen(false)
+    await doLogout()
+    navigate('/login')
+  }
+
+  return (
+    <div class="app-layout min-h-dvh flex flex-col">
+      {/* Header */}
+      <header class="app-header fixed top-0 left-0 right-0 z-40 bg-elevated border-b border-border flex items-center justify-between px-4 h-[var(--header-height)]">
+        <div class="flex items-center gap-2 min-w-0">
+          <button
+            class="header-btn p-2 rounded-lg hover:bg-100 lg:hidden"
+            data-toggle="sidebar"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Menu"
+            aria-expanded={sidebarOpen()}
+          >
+            <span class="icon" innerHTML={ICONS['menu']} />
+          </button>
+
+          <A href="/events" class="flex items-center gap-2 text-lg font-semibold text-text truncate">
+            Týmový manažer
+          </A>
+
+          {/* Desktop navigation */}
+          <nav class="hidden lg:flex items-center gap-1 ml-4" aria-label="Hlavní navigace">
+            {visibleNavItems().map(item => (
+              <A
+                href={item.path}
+                class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
+                activeClass="bg-primary-light text-primary"
+                inactiveClass="text-text-secondary hover:bg-100"
+              >
+                {item.label}
+              </A>
+            ))}
+          </nav>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button class="header-btn p-2 rounded-lg hover:bg-100" aria-label="Notifikace">
+            <span class="icon" innerHTML={ICONS['bell']} />
+          </button>
+
+          <div class="user-menu relative">
+            <button
+              class="header-btn p-1 rounded-full hover:bg-100 flex items-center gap-2"
+              data-toggle="user-menu"
+              onClick={() => setUserMenuOpen(!userMenuOpen())}
+              aria-label="Uživatelské menu"
+              aria-expanded={userMenuOpen()}
+            >
+              <img
+                src={getUserAvatar()}
+                alt=""
+                class="w-8 h-8 rounded-full object-cover border border-border"
+              />
+              <span class="hidden sm:block text-sm font-medium text-text">{getDisplayName()}</span>
+              <span class="icon-sm" innerHTML={ICONS['chevronDown']} />
+            </button>
+
+            {userMenuOpen() && (
+              <div class="user-dropdown absolute right-0 top-full mt-2 w-48 bg-elevated rounded-lg shadow-lg border border-border py-1 animate-slide-down" role="menu">
+                <div class="px-3 py-2 border-b border-border">
+                  <p class="text-sm font-medium text-text">{getDisplayName()}</p>
+                  <p class="text-xs text-muted truncate">{auth().user?.email}</p>
+                </div>
+                <A
+                  href="/profile"
+                  class="flex items-center gap-2 px-3 py-2 text-sm text-text hover:bg-100"
+                  onClick={() => setUserMenuOpen(false)}
+                >
+                  <span class="icon-sm" innerHTML={ICONS['user']} />
+                  Profil
+                </A>
+                <A
+                  href="/profile/settings"
+                  class="flex items-center gap-2 px-3 py-2 text-sm text-text hover:bg-100"
+                  onClick={() => setUserMenuOpen(false)}
+                >
+                  <span class="icon-sm" innerHTML={ICONS['settings']} />
+                  Nastavení
+                </A>
+                <hr class="my-1 border-border" />
+                <button
+                  class="flex items-center gap-2 w-full px-3 py-2 text-sm text-danger hover:bg-danger-light"
+                  onClick={handleLogout}
+                >
+                  <span class="icon-sm" innerHTML={ICONS['logout']} />
+                  {tAuth('logout')}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Sidebar overlay */}
+      {sidebarOpen() && (
+        <div
+          class="sidebar-overlay fixed inset-0 z-50 bg-black/50"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        class="sidebar fixed top-0 left-0 bottom-0 z-60 w-[var(--sidebar-width)] bg-elevated border-r border-border transform transition-transform duration-300 ease-out"
+        classList={{
+          'translate-x-0': sidebarOpen(),
+          '-translate-x-full': !sidebarOpen()
+        }}
+        aria-label="Hlavní navigace"
+        aria-hidden={!sidebarOpen()}
+      >
+        <div class="flex flex-col h-full">
+          <div class="p-4 border-b border-border flex items-center justify-between">
+            <h2 class="font-semibold text-text">Navigace</h2>
+            <button
+              class="header-btn p-2 rounded-lg hover:bg-100"
+              onClick={() => setSidebarOpen(false)}
+              aria-label="Zavřít menu"
+            >
+              <span class="icon" innerHTML={ICONS['close']} />
+            </button>
+          </div>
+
+          <nav class="flex-1 p-3 overflow-y-auto" role="navigation">
+            <ul class="space-y-1" role="list">
+              {visibleNavItems().map(item => (
+                <li>
+                  <A
+                    href={item.path}
+                    class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    activeClass="bg-primary-light text-primary"
+                    inactiveClass="text-text-secondary hover:bg-100"
+                    onClick={() => setSidebarOpen(false)}
+                  >
+                    <span class="icon w-5 h-5 flex-shrink-0" innerHTML={ICONS[item.icon]} />
+                    <span class="flex-1 truncate">{item.label}</span>
+                  </A>
+                </li>
+              ))}
+            </ul>
+
+            <div class="mt-auto pt-4 border-t border-border">
+              <div class="px-3 py-2 flex items-center gap-3">
+                <img
+                  src={getUserAvatar()}
+                  alt=""
+                  class="w-10 h-10 rounded-full object-cover border border-border"
+                />
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-text truncate">{getDisplayName()}</p>
+                  <p class="text-xs text-muted truncate">{auth().user?.roles.join(', ')}</p>
+                </div>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </aside>
+
+      {/* Main content */}
+      <main class="app-main flex-1 pt-[var(--header-height)] pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom))] md:pb-6 overflow-y-auto">
+        <div class="container py-4">{props.children}</div>
+      </main>
+
+      {/* Bottom navigation (mobile) */}
+      <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden" role="navigation" aria-label="Hlavní navigace">
+        <ul class="flex h-full items-stretch justify-around" role="list">
+          {visibleNavItems().map(item => (
+            <li class="flex-1 min-w-0">
+              <A
+                href={item.path}
+                class="bottom-nav-item h-full w-full flex flex-col items-center justify-center gap-1 px-1 py-1 text-[11px] font-medium transition-colors"
+                activeClass="text-primary"
+                inactiveClass="text-text-secondary"
+              >
+                <span class="icon w-6 h-6" innerHTML={ICONS[item.icon]} />
+                <span class="truncate max-w-full">{item.label}</span>
+              </A>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
+  )
+}

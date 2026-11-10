@@ -1,0 +1,5 @@
+# Tymy PWA
+User-agent: *
+Allow: /
+
+Sitemap: https://tymy.cz/sitemap.xml
