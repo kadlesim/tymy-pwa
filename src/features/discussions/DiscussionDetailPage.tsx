@@ -20,10 +20,8 @@ import { bbcodeToHtml } from '../../lib/bbcode'
 import { formatDisplayTime, formatRelativeTime, parseApiDate } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
 
-// The API paginates oldest → newest, so page 1 holds the *oldest* posts. The chat
-// starts at the last page instead (newest posts) and walks backwards from there.
-// This sentinel makes the first request discover the real last page number.
-const NEWEST_PAGE = Number.MAX_SAFE_INTEGER
+// The API is newest-first: page 1 holds the *newest* posts (descending order) and the
+// last page the oldest, so the chat starts at page 1 and loads page 2, 3… for history.
 const MAX_COMPOSER_HEIGHT = 120
 
 const BBCODE_BUTTONS = [
@@ -117,17 +115,8 @@ export default function DiscussionDetailPage() {
 
   // ---------- data ----------
 
-  const loadPage = async (pageParam: number): Promise<DiscussionPage> => {
-    const id = discussionId()
-    // First request: find out how many pages there are, then take the newest one.
-    if (pageParam === NEWEST_PAGE) {
-      const first = await getDiscussionPosts(id, 'bb', 1)
-      const last = first.paging.numberOfPages || 1
-      return last <= 1 ? first : getDiscussionPosts(id, 'bb', last)
-    }
-    return getDiscussionPosts(id, 'bb', pageParam)
-  }
-
+  // The API is newest-first: page 1 holds the newest ~20 posts (descending) and the
+  // last page the oldest. So the chat starts at page 1 and walks forward for history.
   const postsQuery = useInfiniteQuery<
     DiscussionPage,
     Error,
@@ -136,13 +125,10 @@ export default function DiscussionDetailPage() {
     number
   >(() => ({
     queryKey: chatKey(),
-    queryFn: ({ pageParam }) => loadPage(pageParam),
-    initialPageParam: NEWEST_PAGE,
-    getNextPageParam: (lastPage, _pages, lastPageParam: number) => {
-      const current =
-        lastPageParam === NEWEST_PAGE ? lastPage.paging.numberOfPages || 1 : lastPageParam
-      return current > 1 ? current - 1 : undefined
-    },
+    queryFn: ({ pageParam }) => getDiscussionPosts(discussionId(), 'bb', pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _pages, lastPageParam: number) =>
+      lastPageParam < (lastPage.paging.numberOfPages || 1) ? lastPageParam + 1 : undefined,
     enabled: discussionId() > 0,
     staleTime: 1000 * 15
   }))
@@ -378,9 +364,9 @@ export default function DiscussionDetailPage() {
         }
       >
         {(info) => (
-          <div class="chat-shell max-w-3xl mx-auto flex flex-col bg-elevated border border-border rounded-xl overflow-hidden">
+          <div class="chat-shell max-w-3xl mx-auto flex flex-col overflow-hidden">
             {/* Header */}
-            <header class="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
+            <header class="flex-shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border-light">
               <button
                 class="header-btn p-2 rounded-lg hover:bg-100"
                 onClick={() => navigate('/discussions')}
@@ -462,7 +448,7 @@ export default function DiscussionDetailPage() {
             </div>
 
             {/* Composer */}
-            <div class="flex-shrink-0 border-t border-border bg-elevated">
+            <div class="flex-shrink-0 border-t border-border-light">
               <Show
                 when={info().canWrite}
                 fallback={
@@ -479,7 +465,7 @@ export default function DiscussionDetailPage() {
                 </Show>
 
                 <form onSubmit={handleSubmit} class="p-3">
-                  <div class="flex items-end gap-2 rounded-2xl border border-border bg-50 px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
+                  <div class="flex items-end gap-2 rounded-2xl border border-border bg-elevated px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
                     <textarea
                       ref={el => {
                         textareaEl = el

@@ -86,6 +86,9 @@ Not available on this host: `captions` (404), `notes/html` (404).
 - `eventTypes[].preStatusSet[]` carries `code`, `caption`, `icon` and `color`
   (raw RGB hex, no `#`) — the UI uses those colours.
 - **Dev dataset:** events span **2013 → 2022**, so “Upcoming” is legitimately empty.
+- **Discussion pages are newest-first:** `/discussion/{id}/bb/{page}` returns ~20 posts in
+  *descending* order, page 1 = newest, last page = oldest (verified on discussion 1:
+  127 posts, 7 pages). The Blueprint example is misleading.
 
 ---
 
@@ -133,13 +136,17 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **RSVP** uses optimistic cache updates on the active tab key; payload
   `[{userId: <me>, eventId, preStatus, preDescription}]`.
 - **Discussion detail = chat view** (`DiscussionDetailPage`):
-  - The API paginates **oldest → newest**, so page 1 is the *old end*. The chat calls
-    page 1 once to read `paging.numberOfPages`, then starts at the last page (~20 posts)
-    and walks backwards; the page number is the infinite-query `pageParam` and the
-    `NEWEST_PAGE` sentinel triggers the discovery request.
-  - Newest messages at the bottom, composer pinned to the bottom of a full-height
-    `.chat-shell` (CSS var based height, see `index.css`). Scrolling up loads older
-    pages and restores `scrollHeight - anchor` so the reading position stays put.
+  - The API is **newest-first**: `/discussion/{id}/bb/1` returns the newest ~20 posts in
+    *descending* order, page N+1 the next older batch (verified live 2026-11-10 on
+    discussion 1: 127 posts / 7 pages, page 1 = 2022-10-28…2021-05-12, page 7 =
+    2013-04). The Blueprint example that shows page 1 holding 2014 dates is misleading.
+  - The chat therefore starts at **page 1** and walks forward (`pageParam` 1 → 2 → 3…)
+    when the user scrolls up. Pages are reversed and sorted ascending before rendering,
+    so the newest message sits at the bottom.
+  - Composer pinned to the bottom of a full-height `.chat-shell` (height derived from the
+    header/bottom-nav CSS vars in `index.css`); the page itself is **borderless** and
+    centred (`max-w-3xl mx-auto`), separated only by hairlines under the header and above
+    the composer. Scrolling up restores `scrollHeight - anchor` so the position stays put.
   - One day divider per day (`Dnes` / `Včera` / date), one separator per message,
     consecutive posts by the same author within 5 min are grouped (no repeated avatar).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar + client-side preview.
@@ -171,11 +178,18 @@ smoke test confirmed:
 
 - Icon set replaced with Material Design Light throughout (nav, headers, empty states,
   BBCode toolbar, drawer close).
-- Discussion detail rebuilt as a chat (see §5). Checked in Edge against a throwaway
-  local mock of `/api/discussion/{id}/bb/{page}`: opens scrolled to the newest posts,
-  scrolling up loads older pages without jumping, day dividers render, sending clears
-  the composer and scrolls to the new message, no console errors at 1280×800 and
-  390×844. Not yet exercised against the real API (needs credentials).
+- Discussion detail rebuilt as a chat (see §5). First checked against a throwaway local
+  mock, then against the live API — see below.
+
+### 2026-11-10 (later) — live API check
+
+- Logged into `dev.tymy.cz` with the real test account and confirmed the pagination
+  order (see §5) — the chat initially loaded the *oldest* page because of the Blueprint
+  example; fixed to start at page 1 (newest).
+- Verified live at 1280×800 and 390×844: opens scrolled to the newest message with real
+  avatars/names, scrolling up prepends the previous 20 posts (2018 → 2022) without
+  moving the reader, day dividers correct, no console errors.
+- Still not exercised live: sending a post (avoided posting into the shared dev data).
 
 ---
 
@@ -188,22 +202,18 @@ smoke test confirmed:
 2. **Discussion post edit/delete** not in UI. Note the API shape: URL segment is the
    **discussion** id, post id goes in the body (`PUT|DELETE /discussions/{discussionId}/post`).
    Current helpers in `api.ts` are wrong-shaped and unused — fix before wiring UI.
-3. **Confirm chat pagination against the live server** with a real session: the chat
-   assumes `/discussion/{id}/bb/1` returns the *oldest* ~20 posts and the last page the
-   newest (matches the API Blueprint example, 277 posts / 14 pages). Not yet verified
-   live — mock-tested only.
-4. **Pagination**: Event lists cap at 40/60 with no “load more”. Discussions now
+3. **Pagination**: Event lists cap at 40/60 with no “load more”. Discussions now
    load older pages on scroll.
-5. **Notes**: `NotesPage` exists but has no route, and `/notes/html` 404s on dev.
-6. **Poll UX**: `minItems`/`maxItems` not enforced; only filled options are submitted;
+4. **Notes**: `NotesPage` exists but has no route, and `/notes/html` 404s on dev.
+5. **Poll UX**: `minItems`/`maxItems` not enforced; only filled options are submitted;
    TEXT/NUMBER semantics could differ from server expectations.
-7. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
+6. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
    Playwright/Vitest browser for login → events → RSVP.
-8. **App icons** are procedural placeholders (`npm run icons`) — replace with real
+7. **App icons** are procedural placeholders (`npm run icons`) — replace with real
    artwork. (The in-app UI icons are already Material Design Light, see §2.)
-9. **Push notifications** need a backend VAPID key + subscription endpoint.
-10. **Production hosting** must serve the app **same-origin with the API** (no CORS) and
-    over HTTPS; SPA fallback to `index.html`.
+8. **Push notifications** need a backend VAPID key + subscription endpoint.
+9. **Production hosting** must serve the app **same-origin with the API** (no CORS) and
+   over HTTPS; SPA fallback to `index.html`.
 
 ---
 
@@ -246,3 +256,6 @@ npm run icons      # regenerate PNG app icons
   though it exists at runtime — the spinner is a spinning `refresh`.
 - **Icon sizing**: `.icon` = 20 px, `.icon-sm` = 16 px, `.icon-lg` = 40 px. Text
   utilities like `text-4xl` do **not** resize glyphs (the svg has a fixed size).
+- **Trust the live API over `tymy.apib` for ordering/paging.** The Blueprint shows
+  discussion page 1 containing the oldest posts; the server actually returns the newest
+  first. Always probe with one real request before wiring pagination.
