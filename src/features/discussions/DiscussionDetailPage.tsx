@@ -118,7 +118,6 @@ export default function DiscussionDetailPage() {
   const chatKey = () => queryKeys.discussionChat(discussionId())
 
   const [newPost, setNewPost] = createSignal('')
-  const [showPreview, setShowPreview] = createSignal(false)
   const [scroller, setScroller] = createSignal<HTMLDivElement>()
   const [atBottom, setAtBottom] = createSignal(true)
   let textareaEl: HTMLTextAreaElement | undefined
@@ -242,8 +241,12 @@ export default function DiscussionDetailPage() {
   const resizeComposer = () => {
     const el = textareaEl
     if (!el) return
+    // A taller composer shrinks the message pane; stay pinned to the newest message
+    // unless the reader deliberately scrolled up.
+    const pinned = atBottom()
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, MAX_COMPOSER_HEIGHT)}px`
+    if (pinned) requestAnimationFrame(() => scrollToBottom())
   }
 
   const insertBbcode = (tag: string) => {
@@ -288,7 +291,6 @@ export default function DiscussionDetailPage() {
     mutationFn: (post: string) => createDiscussionPost(discussionId(), post),
     onSuccess: async () => {
       setNewPost('')
-      setShowPreview(false)
       if (textareaEl) {
         textareaEl.style.height = 'auto'
         textareaEl.focus()
@@ -492,13 +494,6 @@ export default function DiscussionDetailPage() {
                   </p>
                 }
               >
-                <Show when={showPreview() && newPost().trim()}>
-                  <div class="max-h-40 overflow-y-auto px-4 pt-3">
-                    <p class="text-xs font-medium text-muted mb-1">Náhled</p>
-                    <div class="prose prose-sm max-w-none" innerHTML={bbcodeToHtml(newPost())} />
-                  </div>
-                </Show>
-
                 <form onSubmit={handleSubmit} class="p-3">
                   <div class="flex items-end gap-2 rounded-md border border-border bg-elevated px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
                     <textarea
@@ -525,7 +520,7 @@ export default function DiscussionDetailPage() {
                       title="Odeslat (Enter)"
                     >
                       <span
-                        class="icon"
+                        class="icon-md"
                         classList={{ 'animate-pulse': createMutation.isPending }}
                         innerHTML={ICONS['send']}
                       />
@@ -546,18 +541,6 @@ export default function DiscussionDetailPage() {
                         </button>
                       )}
                     </For>
-
-                    <div class="flex-1" />
-
-                    <button
-                      type="button"
-                      class="btn btn-secondary btn-sm"
-                      onClick={() => setShowPreview(!showPreview())}
-                      aria-pressed={showPreview()}
-                    >
-                      <span class="icon-sm" innerHTML={ICONS['preview']} />
-                      Náhled
-                    </button>
                   </div>
 
                   <Show when={createMutation.isError}>

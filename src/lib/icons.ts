@@ -23,7 +23,6 @@ import {
   mdilConsole,
   mdilDelete,
   mdilDotsHorizontal,
-  mdilEye,
   mdilFormatBold,
   mdilFormatItalic,
   mdilFormatListBulleted,
@@ -67,7 +66,6 @@ export const ICONS: Record<string, string> = {
   // Chat
   send: icon(mdilArrowRightCircle),
   attach: icon(mdilPaperclip),
-  preview: icon(mdilEye),
   refresh: icon(mdilRefresh),
 
   // BBCode toolbar

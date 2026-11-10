@@ -33,7 +33,7 @@ Sections: **Events** (RSVP), **Discussions** (BBCode chat), **Polls**, **Roster*
 | Icons | Material Design Light (`@mdi/light-js`, Pictogrammers) inlined as SVG strings |
 
 Design tokens (2026-11-10): the UI is **neutral grey** — `--color-primary` and friends are
-greys (`#343a40` / `#212529` / `#e9ecef`), so buttons, active nav, links and focus rings
+greys (`#495057` / `#343a40` / `#e9ecef`), so buttons, active nav, links and focus rings
 carry no blue. Radii are deliberately tight (`--radius-lg` = 4 px, `--radius-xl` = 6 px);
 circles are reserved for avatars. Status colours (success/warning/danger/info) are
 unchanged and still semantic.
@@ -159,7 +159,8 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     the composer. Scrolling up restores `scrollHeight - anchor` so the position stays put.
   - One day divider per day (`Dnes` / `Včera` / date), one separator per message,
     consecutive posts by the same author within 5 min are grouped (no repeated avatar).
-  - Enter sends, Shift+Enter inserts a newline; BBCode toolbar + client-side preview.
+  - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
+    (the client-side preview toggle was removed on request).
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
   from API flags (`canPlan`, `canWrite`, `canView`, …).
 - **Guards** wait for `initAuth()` (`useIsLoading`) so deep links survive reload.
@@ -264,8 +265,9 @@ npm run icons      # regenerate PNG app icons
   +8 kB gzip). Verify tree-shaking with a dist grep after adding icons. MDI Light has
   **no `send` glyph** (a round `arrow-up` button is used) and **no `mdilLoading`** even
   though it exists at runtime — the spinner is a spinning `refresh`.
-- **Icon sizing**: `.icon` = 20 px, `.icon-sm` = 16 px, `.icon-lg` = 40 px. Text
-  utilities like `text-4xl` do **not** resize glyphs (the svg has a fixed size).
+- **Icon sizing**: `.icon` = 20 px, `.icon-sm` = 16 px, `.icon-md` = 24 px,
+  `.icon-lg` = 40 px. Text utilities like `text-4xl` do **not** resize glyphs (the svg
+  has a fixed size).
 - **Radius/colour utilities live in `index.css`, not in Tailwind's theme.** The custom
   block after `@tailwind utilities` redefines `.rounded-md/.rounded-lg/.rounded-xl/.rounded-2xl`,
   so the values in `tailwind.config.cjs` are ignored — change the `--radius-*` vars (and

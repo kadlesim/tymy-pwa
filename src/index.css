@@ -6,10 +6,10 @@
 
 :root {
   /* Colors - Primary (neutral greys: no blue accents anywhere in the UI) */
-  --color-primary: #343a40;
-  --color-primary-hover: #212529;
+  --color-primary: #495057;
+  --color-primary-hover: #343a40;
   --color-primary-light: #e9ecef;
-  --color-primary-dark: #14161a;
+  --color-primary-dark: #212529;
   
   /* Colors - Secondary */
   --color-secondary: #6c757d;
@@ -479,6 +479,7 @@ label {
 /* Material Design Light glyphs paint with currentColor and are sized by the wrapper. */
 .icon,
 .icon-sm,
+.icon-md,
 .icon-lg {
   display: inline-flex;
   align-items: center;
@@ -494,12 +495,17 @@ label {
   width: 1rem;
   height: 1rem;
 }
+.icon-md svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
 .icon-lg svg {
   width: 2.5rem;
   height: 2.5rem;
 }
 .icon svg,
 .icon-sm svg,
+.icon-md svg,
 .icon-lg svg {
   display: block;
   fill: currentColor;
