@@ -8,17 +8,17 @@ import { createEffect, createMemo, createSignal, ErrorBoundary, For, onCleanup, 
 import { useNavigate, useParams } from '@solidjs/router'
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import {
-  apiAssetUrl,
   createDiscussionPost,
   getDiscussionPosts,
   type DiscussionPage,
   type DiscussionPost
 } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
+import { useAuth } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
-import { bbcodeToHtml } from '../../lib/bbcode'
-import { formatDisplayTime, formatRelativeTime, parseApiDate } from '../../lib/date-filters'
+import { parseApiDate } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
+import ChatMessage from './ChatMessage'
 
 // The API is newest-first: page 1 holds the *newest* posts (descending order) and the
 // last page the oldest, so the chat starts at page 1 and loads page 2, 3… for history.
@@ -55,13 +55,6 @@ function dayLabel(date: Date): string {
 }
 
 const postedAt = (post: DiscussionPost): Date => parseApiDate(post.createdAt)
-
-const authorName = (post: DiscussionPost): string =>
-  post.createdBy?.callName ||
-  post.createdBy?.displayName ||
-  post.createdBy?.login ||
-  post.userName ||
-  'Neznámý autor'
 
 // Posts whose author account was deleted come back with `createdBy: null` (only
 // `userName`). Give each unknown author a unique grouping key so unrelated system
@@ -112,7 +105,10 @@ export default function DiscussionDetailPage() {
   const params = useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const auth = useAuth()
   const { tDiscussions } = useCommonCaptions()
+
+  const meId = () => auth().user?.id ?? null
 
   const discussionId = () => parseInt(params['id'] ?? '0', 10)
   const chatKey = () => queryKeys.discussionChat(discussionId())
@@ -341,51 +337,19 @@ export default function DiscussionDetailPage() {
     }
 
     const post = item.post
+    const mine = post.createdById !== null && post.createdById === meId()
     return (
-      <div class="flex gap-3 py-3 border-b border-border-light last:border-b-0">
-        <div class="w-8 flex-shrink-0">
-          <Show when={!item.grouped}>
-            <Show
-              when={post.createdBy?.pictureUrl}
-              fallback={
-                <span
-                  class="w-8 h-8 rounded-full bg-secondary-light flex items-center justify-center text-muted"
-                  title={authorName(post)}
-                >
-                  <span class="icon-sm" innerHTML={ICONS['user']} />
-                </span>
-              }
-            >
-              {(pictureUrl) => (
-                <img
-                  src={apiAssetUrl(pictureUrl())}
-                  alt=""
-                  loading="lazy"
-                  class="w-8 h-8 rounded-full object-cover border border-border"
-                />
-              )}
-            </Show>
-          </Show>
-        </div>
-        <div class="flex-1 min-w-0">
-          <Show when={!item.grouped}>
-            <div class="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-1">
-              <span class="text-sm font-semibold text-text truncate">{authorName(post)}</span>
-              <time
-                class="text-xs text-muted"
-                datetime={post.createdAt}
-                title={post.createdAtStr || formatRelativeTime(post.createdAt)}
-              >
-                {formatDisplayTime(post.createdAt)}
-              </time>
-              <Show when={post.sticky}>
-                <span class="badge bg-warning-light text-warning">Připnuto</span>
-              </Show>
-            </div>
-          </Show>
-          <div class="chat-bubble prose prose-sm max-w-none" innerHTML={bbcodeToHtml(post.post)} />
-        </div>
-      </div>
+      <ChatMessage
+        discussionId={discussionId()}
+        post={post}
+        grouped={item.grouped}
+        canEdit={Boolean(discussion()?.editablePosts) && mine}
+        canDelete={
+          Boolean(discussion()?.canDelete) ||
+          (!Boolean(discussion()?.editablePosts) && mine)
+        }
+        canStick={Boolean(discussion()?.canStick)}
+      />
     )
   }
 

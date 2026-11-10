@@ -523,17 +523,41 @@ export async function createDiscussionPost(discussionId: number, post: string): 
   })
 }
 
-export async function updateDiscussionPost(post: { id: number; post: string; sticky?: boolean }): Promise<void> {
-  await request(`/discussions/${post.id}/post`, {
+/**
+ * Edits a post or toggles its sticky flag. The API takes the discussion id in the URL
+ * and the post id in the body (`PUT /discussions/{discussionId}/post`).
+ */
+export async function updateDiscussionPost(
+  discussionId: number,
+  post: { id: number; post?: string; sticky?: boolean }
+): Promise<DiscussionPost> {
+  return request<DiscussionPost>(`/discussions/${discussionId}/post`, {
     method: 'PUT',
     body: JSON.stringify(post)
   })
 }
 
-export async function deleteDiscussionPost(postId: number): Promise<void> {
-  await request(`/discussions/${postId}/post`, {
+/** Deletes one post: discussion id in the URL, post id in the body. */
+export async function deleteDiscussionPost(discussionId: number, postId: number): Promise<void> {
+  await request(`/discussions/${discussionId}/post`, {
     method: 'DELETE',
     body: JSON.stringify({ id: postId })
+  })
+}
+
+/**
+ * Adds (`POST`) or removes (`DELETE`) the current user's reaction to a post.
+ * The body is a bare JSON string with the emoji, e.g. `"👍"`.
+ */
+export async function reactToPost(
+  discussionId: number,
+  postId: number,
+  emoji: string,
+  remove: boolean = false
+): Promise<void> {
+  await request(`/discussions/${discussionId}/post/${postId}/react`, {
+    method: remove ? 'DELETE' : 'POST',
+    body: JSON.stringify(emoji)
   })
 }
 

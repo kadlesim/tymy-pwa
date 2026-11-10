@@ -172,6 +172,18 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - Message text never widens the column: `.chat-bubble` uses `overflow-wrap: anywhere`,
     so a long unbroken URL/hash wraps instead of causing horizontal scroll; `[code]`
     blocks keep their own scrollbar (`.prose pre`).
+  - Message actions appear on hover (always on touch) behind a `⋯` button — the menu
+    opens upwards when the message sits near the bottom of the pane, because it lives
+    inside the scrolling container. Rights mirror the server (`PostManager`):
+    `react`/`copy` for everyone, `Upravit` for own posts (also needs
+    `discussion.editablePosts`), `Připnout` for `canStick`, `Smazat` for `canDelete` —
+    and **own post only when `editablePosts` is false**; with `editablePosts` the API
+    answers 403 "Nedostatečná práva" even for your own post.
+  - Reactions are optimistic: the cached page is patched locally, then
+    `POST|DELETE /discussions/{id}/post/{postId}/react` (body = bare JSON string) is sent
+    and the cache invalidated on error. Existing reactions render as badges under the
+    message and toggle on click.
+  - Editing swaps the bubble for a textarea holding the raw BBCode (Uložit / Zrušit).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
     (the client-side preview toggle was removed on request).
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
@@ -263,12 +275,16 @@ smoke test confirmed:
 ## 7. Open items / next steps (priority order)
 
 1. **Verify write endpoints** with one real action each (currently docs-based only):
-   `POST /attendance`, `POST /discussions/{id}/post`, `POST /polls/{id}/votes`,
-   `PUT /user/{id}`, `POST /user/{id}/avatar`, `POST /events/create`,
-   `PUT /event/{id}`, `DELETE /event/{id}`.
-2. **Discussion post edit/delete** not in UI. Note the API shape: URL segment is the
-   **discussion** id, post id goes in the body (`PUT|DELETE /discussions/{discussionId}/post`).
-   Current helpers in `api.ts` are wrong-shaped and unused — fix before wiring UI.
+   `POST /attendance`, `POST /polls/{id}/votes`, `PUT /user/{id}`,
+   `POST /user/{id}/avatar`, `POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`.
+   Discussion writes are **done**: `POST /discussions/{id}/post` (201),
+   `PUT` (200, sets `updatedAt`), `POST|DELETE …/post/{postId}/react` (200) — all verified
+   on discussion 2. `DELETE /discussions/{id}/post` answers 403 for this account because
+   the discussion has `editablePosts: true` (see §5).
+2. **Discussion post edit/delete** is wired up (hover menu, see §5). Note the API shape:
+   URL segment is the **discussion** id, post id goes in the body
+   (`PUT|DELETE /discussions/{discussionId}/post`) — the old helpers were wrong-shaped
+   and have been fixed. Reactions use `/discussions/{id}/post/{postId}/react`.
 3. **Pagination**: Event lists cap at 40/60 with no “load more”. Discussions now
    load older pages on scroll.
 4. **Notes**: `NotesPage` exists but has no route, and `/notes/html` 404s on dev.
