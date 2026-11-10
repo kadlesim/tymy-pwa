@@ -51,42 +51,37 @@ export default function TeamPage() {
             <span class="icon icon-lg text-primary" innerHTML={ICONS['users']} />
           </div>
           <h1 class="text-2xl font-bold text-text">tymy.cz</h1>
-          <p class="text-muted mt-1">Vyberte tým, ke kterému se chcete přihlásit</p>
         </div>
 
         <form onSubmit={handleSubmit} class="space-y-4">
-          <div>
-            <label for="team" class="label">
-              Adresa týmu
-            </label>
-            <div class="flex items-center gap-2">
-              <input
-                id="team"
-                type="text"
-                class="input text-center font-medium"
-                style="width: 5.5rem"
-                value={name()}
-                onInput={e => {
-                  setName(e.currentTarget.value)
-                  setError(null)
-                }}
-                placeholder="tym"
-                autocomplete="off"
-                autocapitalize="none"
-                spellcheck={false}
-                maxlength={40}
-                required
-                disabled={checking()}
-                autofocus
-              />
-              <span class="text-xl font-semibold text-text leading-none whitespace-nowrap">
-                .{TEAM_DOMAIN}
-              </span>
-            </div>
-            <p class="text-xs text-muted mt-1">
-              Například <span class="font-medium text-text">dev.{TEAM_DOMAIN}</span>
-            </p>
+          <div class="flex items-center justify-center gap-2">
+            <input
+              id="team"
+              type="text"
+              class="input text-center font-medium"
+              style="width: 5.5rem"
+              value={name()}
+              onInput={e => {
+                setName(e.currentTarget.value)
+                setError(null)
+              }}
+              placeholder="tym"
+              aria-label="Adresa týmu"
+              autocomplete="off"
+              autocapitalize="none"
+              spellcheck={false}
+              maxlength={40}
+              required
+              disabled={checking()}
+              autofocus
+            />
+            <span class="text-xl font-semibold text-text leading-none whitespace-nowrap">
+              .{TEAM_DOMAIN}
+            </span>
           </div>
+          <p class="text-xs text-muted text-center">
+            Například <span class="font-medium text-text">dev.{TEAM_DOMAIN}</span>
+          </p>
 
           <Show when={error()}>
             <div class="alert alert-danger p-3 rounded-lg bg-danger-light text-danger text-sm flex items-center gap-2 animate-slide-down" role="alert">
