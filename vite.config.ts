@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'Týmový manažer',
         short_name: 'Tymy',
         description: 'Aplikace pro správu sportovního týmu',
-        theme_color: '#0d6efd',
+        theme_color: '#343a40',
         background_color: '#ffffff',
         display: 'standalone',
         scope: '/',

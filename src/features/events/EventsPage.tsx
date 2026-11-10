@@ -343,7 +343,7 @@ function EventCard(props: EventCardProps) {
                     {(option) => {
                       const selected = () => myStatus() === option.code
                       const cls = () =>
-                        'rsvp-btn px-3 py-1.5 rounded-full text-xs font-medium transition-all ' +
+                        'rsvp-btn px-3 py-1.5 rounded-md text-xs font-medium transition-all ' +
                         (selected() ? 'text-white' : 'bg-100 text-text-secondary hover:bg-200') +
                         (props.isPending ? ' opacity-50 cursor-wait' : '')
                       const background = () =>

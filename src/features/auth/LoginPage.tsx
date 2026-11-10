@@ -49,7 +49,7 @@ export default function LoginPage() {
       <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up">
         {/* Logo/Brand */}
         <div class="text-center mb-6">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-light mb-4">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
             <span class="icon text-primary" innerHTML={ICONS['calendar']} />
           </div>
           <h1 class="text-2xl font-bold text-text">Týmový manažer</h1>

@@ -32,7 +32,13 @@ Sections: **Events** (RSVP), **Discussions** (BBCode chat), **Polls**, **Roster*
 | BBCode | Hand-written safe parser `src/lib/bbcode.ts` (escape → whitelist tags) |
 | Icons | Material Design Light (`@mdi/light-js`, Pictogrammers) inlined as SVG strings |
 
-Bundle ≈ **65 kB gzipped** (JS ~40 kB + CSS ~8 kB + vendor ~15 kB).
+Design tokens (2026-11-10): the UI is **neutral grey** — `--color-primary` and friends are
+greys (`#343a40` / `#212529` / `#e9ecef`), so buttons, active nav, links and focus rings
+carry no blue. Radii are deliberately tight (`--radius-lg` = 4 px, `--radius-xl` = 6 px);
+circles are reserved for avatars. Status colours (success/warning/danger/info) are
+unchanged and still semantic.
+
+Bundle ≈ **65 kB gzipped** (JS ~47 kB + CSS ~9 kB + vendor ~15 kB).
 
 ---
 
@@ -260,6 +266,10 @@ npm run icons      # regenerate PNG app icons
   though it exists at runtime — the spinner is a spinning `refresh`.
 - **Icon sizing**: `.icon` = 20 px, `.icon-sm` = 16 px, `.icon-lg` = 40 px. Text
   utilities like `text-4xl` do **not** resize glyphs (the svg has a fixed size).
+- **Radius/colour utilities live in `index.css`, not in Tailwind's theme.** The custom
+  block after `@tailwind utilities` redefines `.rounded-md/.rounded-lg/.rounded-xl/.rounded-2xl`,
+  so the values in `tailwind.config.cjs` are ignored — change the `--radius-*` vars (and
+  `--color-primary*` for the grey palette) instead.
 - **Trust the live API over `tymy.apib` for ordering/paging.** The Blueprint shows
   discussion page 1 containing the oldest posts; the server actually returns the newest
   first. Always probe with one real request before wiring pagination.

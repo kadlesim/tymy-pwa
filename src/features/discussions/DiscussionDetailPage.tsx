@@ -473,7 +473,7 @@ export default function DiscussionDetailPage() {
               <Show when={!atBottom()}>
                 <button
                   type="button"
-                  class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-full bg-elevated border border-border shadow-md text-xs font-medium text-text hover:bg-100"
+                  class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1 px-3 py-1.5 rounded-md bg-elevated border border-border shadow-md text-xs font-medium text-text hover:bg-100"
                   onClick={() => scrollToBottom(true)}
                 >
                   <span class="icon-sm" innerHTML={ICONS['chevronDown']} />
@@ -500,7 +500,7 @@ export default function DiscussionDetailPage() {
                 </Show>
 
                 <form onSubmit={handleSubmit} class="p-3">
-                  <div class="flex items-end gap-2 rounded-2xl border border-border bg-elevated px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
+                  <div class="flex items-end gap-2 rounded-md border border-border bg-elevated px-2 py-1 transition-colors focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-light">
                     <textarea
                       ref={el => {
                         textareaEl = el
@@ -519,7 +519,7 @@ export default function DiscussionDetailPage() {
                     />
                     <button
                       type="submit"
-                      class="btn btn-primary w-9 h-9 !p-0 rounded-full mb-1 flex-shrink-0"
+                      class="btn btn-primary w-9 h-9 !p-0 rounded-md mb-1 flex-shrink-0"
                       disabled={createMutation.isPending || !newPost().trim()}
                       aria-label="Odeslat"
                       title="Odeslat (Enter)"

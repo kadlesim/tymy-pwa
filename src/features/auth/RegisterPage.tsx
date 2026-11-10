@@ -133,7 +133,7 @@ export default function RegisterPage() {
     <div class="auth-page min-h-dvh flex items-center justify-center p-4 bg-50">
       <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up">
         <div class="text-center mb-6">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-light mb-4">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
             <span class="icon text-primary" innerHTML={ICONS['user']} />
           </div>
           <h1 class="text-2xl font-bold text-text">Registrace</h1>

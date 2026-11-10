@@ -11,7 +11,7 @@
 import {
   mdilAccount,
   mdilArrowLeft,
-  mdilArrowUp,
+  mdilArrowRightCircle,
   mdilBell,
   mdilCalendar,
   mdilCancel,
@@ -65,7 +65,7 @@ export const ICONS: Record<string, string> = {
   logout: icon(mdilLogout),
 
   // Chat
-  send: icon(mdilArrowUp),
+  send: icon(mdilArrowRightCircle),
   attach: icon(mdilPaperclip),
   preview: icon(mdilEye),
   refresh: icon(mdilRefresh),
