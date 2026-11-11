@@ -86,7 +86,9 @@ hover background at most.
 
 Theme + text size (2026-11-11): `.dark` remaps the neutral scale (50–200 = surfaces,
 500–900 = text) and lifts `text-primary`; the root font size becomes 18 px when
-`<html data-text-size="large">`. The language lives on `<html lang>`.
+`<html data-text-size="large">`. The language lives on `<html lang>`. Dark-mode secondary
+text was lifted again (`--color-text-secondary: #c1c7cd`, `--color-text-muted: #a3abb3`) —
+the old #868e96 made descriptions hard to read on #14161a.
 
 Bundle ≈ **75 kB gzipped** (JS ~56 kB + CSS ~10 kB + vendor ~15 kB); the i18n dictionary
 is the biggest recent addition.
@@ -345,7 +347,9 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   the range start and shows it (`XLSX 2026`).
 - **Tým** = a table (avatar, display name, jersey number, phone, e-mail) instead of cards;
   phone hides below `md`, e-mail below `sm`, and the hidden values reappear as a second
-  line under the name on phones. Broken/missing avatars fall back to the user glyph.
+  line under the name on phones. Broken/missing avatars fall back to the user glyph. The
+  search covers name, login, e-mail **and both phone numbers**; phones are compared
+  digits-only, so “777222” finds “+420 777 222 333”.
 - **Ankety**: the list keeps the compact summary. The detail shows **results as a table** —
   one row per voter (avatar + name), one column per choice option (BOOLEAN → Yes/No in
   green/red, NUMBER → the number), and a final **Poznámka** column. The API has no
@@ -456,7 +460,11 @@ smoke test confirmed:
   `favicon-32.png`, `favicon-192.png` and `apple-touch-icon.png` from `logo2.png`.
 - Also fixed while there: the two remaining emoji glyphs (🔑, 👁) became MDI `lock`/`eye`.
 - After switching the icon source to the square `logo2.png`, the icons were regenerated
-  (flattened onto white, maskable padded).
+  (maskable padded).
+- `npm run icons` now keeps the logo's **transparent background** for the normal icons,
+  shortcuts and favicons; only `maskable-512.png` and `apple-touch-icon.png` are flattened
+  onto white, because Android masks maskable icons against the launcher and iOS composites
+  transparency onto black.
 - English labels: with a mock that returns Czech captions, the EN UI showed **Training /
   Match** type badges and **Attending / Not attending / Arriving late** RSVP buttons.
 - Optimistic chat post, checked against a mock with a **1.5 s delayed POST**: the message
@@ -481,6 +489,10 @@ smoke test confirmed:
   a table (Member / option columns with vote counts / Note). **0 console errors**.
 - A poll vote by an id absent from every roster category rendered as "Alien Voter" (its
   `/user/{id}` response) instead of "User 106"; the event-card glyph is 28 px.
+- Icons regenerated with a **transparent background** (alpha confirmed on `icon-512`,
+  `favicon-32`; `maskable-512` and `apple-touch-icon` stay opaque). Roster search found
+  "Jan Novák" from `777222` against `+420 777 222 333` (1 row). In dark mode the muted text
+  resolves to `rgb(163, 171, 179)`. **0 console errors**.
 
 ---
 
@@ -613,6 +625,9 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   after `@tailwind utilities`; a search field that needs room for an icon must set
   `padding-left` inline (the manage page does).
 - **`npm run icons` is no longer dependency-free** — it uses `sharp` and reads `logo2.png`.
+- **Two icons must stay opaque**: `maskable-512.png` (Android masks it against the
+  launcher) and `apple-touch-icon.png` (iOS composites transparency onto black). The other
+  icons, shortcuts and favicons keep the logo's transparency on purpose.
 - **Optimistic chat posts** carry a negative id and live at the front of `pages[0].posts`
   (page 1 is newest-first). Replace the placeholder in `onSuccess` and mark the chat query
   stale with `refetchType: 'none'` — a full invalidation refetches every loaded page and

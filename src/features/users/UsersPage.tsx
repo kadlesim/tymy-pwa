@@ -30,14 +30,28 @@ export default function UsersPage() {
     const q = search().toLowerCase().trim()
     const list = usersQuery.data ?? []
     if (!q) return list
-    return list.filter(
-      u =>
-        u.callName?.toLowerCase().includes(q) ||
-        u.login?.toLowerCase().includes(q) ||
-        u.firstName?.toLowerCase().includes(q) ||
-        u.lastName?.toLowerCase().includes(q) ||
-        u.email?.toLowerCase().includes(q)
-    )
+    // Phones are typed with spaces/dashes; compare stripped forms too.
+    const phoneQuery = q.replace(/[^\d+]/g, '')
+    const digitsOf = (value?: string | null) => (value ?? '').replace(/[^\d+]/g, '')
+    return list.filter(user => {
+      const haystack = [
+        user.callName,
+        user.login,
+        user.firstName,
+        user.lastName,
+        user.email,
+        user.phone,
+        user.phone2
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      if (haystack.includes(q)) return true
+      return (
+        phoneQuery.length >= 3 &&
+        (digitsOf(user.phone).includes(phoneQuery) || digitsOf(user.phone2).includes(phoneQuery))
+      )
+    })
   })
 
   return (
@@ -47,7 +61,7 @@ export default function UsersPage() {
         <input
           type="search"
           class="input w-full sm:w-64"
-          placeholder={tr('Hledat člena…')}
+          placeholder={tr('Hledat jméno, e-mail, telefon…')}
           value={search()}
           onInput={e => setSearch(e.currentTarget.value)}
         />

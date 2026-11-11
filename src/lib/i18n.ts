@@ -410,6 +410,7 @@ const EN: Record<string, string> = {
   'Muž': 'Male',
   'Žena': 'Female',
   'Hledat člena…': 'Search a member…',
+  'Hledat jméno, e-mail, telefon…': 'Search name, e-mail, phone…',
   'Žádní uživatelé': 'No users',
   'V této skupině nejsou žádní členové.': 'There are no members in this group.',
 
