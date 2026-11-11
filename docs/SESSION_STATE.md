@@ -530,11 +530,12 @@ smoke test confirmed:
 8. **App icons** are generated from `logo2.png` (`npm run icons`, sharp); the procedural
    placeholders and `favicon.svg` are gone.
 9. **Notifications — planned, not implemented.** Full plan in
-   **`docs/NOTIFICATIONS_PLAN.md`**: Phase 1 is a client-derived in-app notification centre
-   (bell badge + menu, no backend); Phase 2 is a server feed + Web Push and needs API work
-   (notifications table/endpoints, subscription storage, VAPID sender). The bell is still
-   decorative and the Profile toggles are placeholders. Open questions to confirm in the
-   dev.tymy.cz discussion are listed in the plan.
+   **`docs/NOTIFICATIONS_PLAN.md`**. The server **already implements Web Push** (VAPID,
+   `POST /api/push-notification`, payload `{title,message,image?,url?}`, triggers: new
+   discussion post, event create/time-change/delete), so Phase 2 is client-only: subscribe
+   + SW `push`/`notificationclick` + deep links. Phase 1 (bell badge/menu) is still
+   client-derived because there is no notification feed or read state. Details, payloads
+   and the upstream wish list are in the plan.
 10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
     Cloudflare Pages + the two Pages Functions, `TYMY_DEFAULT_TEAM=pd`. Remaining follow-ups:
     log in there once for real (writes were only tested against dev/pd locally), add a

@@ -1,285 +1,320 @@
 # Notifications — implementation plan
 
-> **Status: plan only.** Nothing in this document is implemented yet. The bell in the
-> header is still decorative, the Profile → Notifikace toggles are placeholders, and there
-> is no notification code in the app.
+> **Status: plan only.** No notification code has been written. The bell in the header is
+> still decorative and the Profile → Notifikace toggles are placeholders.
 
-This plan is based on the repository (`tymy.apib`, `src/`, `docs/`) and the endpoints that
-have actually been exercised against `dev.tymy.cz` / `pd.tymy.cz`. The vendored API
-blueprint has **no notification, push or webhook section at all**; the browser-side push
-helpers in `src/lib/pwa.ts` are scaffolding without a sender.
+This plan was revised after reading the **dev.tymy.cz discussions** (account supplied by the
+owner) and the **open-source server** (`github.com/KminekMatej/tymy`, branch `develop`).
+The important correction to the first draft: **the server-side Web Push backend already
+exists and works** — no vendor work is needed to send browser notifications. What is
+missing on our side is the client (subscription + service worker), and what is missing on
+the server is an in-app feed / read state (optional).
 
 ---
 
-## 1. Recommendation
+## 1. Summary
 
-Ship notifications in two phases:
-
-| Phase | What | Backend work | Effort |
+| Phase | Scope | Backend | Effort |
 |---|---|---|---|
-| **1. In-app notification centre** | Derive "what's new for me" from endpoints the app already calls; bell badge + dropdown; seen-state in `localStorage`. | **none** | ~1–1.5 days |
-| **2. Server feed + Web Push** | Real notifications table, read flags, push subscriptions and VAPID sending. | **required** (vendor side) | client ~1 day + server 2–3 days |
+| **1. Bell + derived feed** | Badge/menu for "what's new for me" from existing endpoints; seen-state in `localStorage` | none | ~1–1.5 days |
+| **2. Web Push** | Register for push, post the subscription, handle `push`/`notificationclick` in the SW, deep links | **already exists** | ~0.5–1 day |
+| **3. Optional server upgrades** | Notification history/read state, badge count, per-user prefs, poll/attendance triggers, unsubscribe | vendor | 1–3 days |
 
-Phase 1 is useful on its own and can ship now. Phase 2 is the only way to get notifications
-while the app is closed, and it needs API work that cannot be done from this repo.
+Phase 2 is the real "notifications" and can ship without any server change. Phase 1 gives
+the bell a meaning while the app is open (push has no history: nothing to list).
 
 ---
 
-## 2. What exists today
+## 2. Verified backend contract (dev.tymy.cz, 2026-11-11)
 
-### Client
+### 2.1 Endpoints
 
-| Piece | Location | State |
+All secured (`SecuredPresenter`), POST only (GET → `405 {"status":"ERROR","statusMessage":"E405"}`).
+
+| Endpoint | Body | Behaviour |
 |---|---|---|
-| Bell button | `src/features/layout/Layout.tsx` | Icon only, no handler, no badge |
-| Push helpers | `src/lib/pwa.ts` | `requestNotificationPermission()`, `subscribeToPush()` (reads `VITE_VAPID_PUBLIC_KEY`), no subscriber storage, no sender |
-| Service worker | `vite-plugin-pwa` (`autoUpdate`) | No `push` / `notificationclick` handlers |
-| Notification settings | `Profile → Nastavení → Notifikace` | Three inert toggles |
-| Data queries | `queryClient.ts` | `discussions/withNew`, `polls/menu`, events, `live` already cached |
+| `POST /api/push-notification` | the **raw `PushSubscription` JSON** (`endpoint`, `expirationTime`, `keys.p256dh`, `keys.auth`) | Stores/returns a `WEB` subscriber for the logged-in user (200 existing, 201 created) |
+| `POST /api/push-notification/fcm` | bare JSON **string** `deviceId` | Stores an `FCM` subscriber (native Android) |
+| `POST /api/push-notification/apple` | bare JSON **string** `deviceId` | Stores an `APNS` subscriber (native iOS) |
 
-### API (verified endpoints only)
+- Subscriber table `push_notification`: `id`, `created`, `type` (`WEB|APNS|FCM`), `user_id`,
+  `subscription` (web subscription JSON or device id).
+- **No** `GET /notifications`, no read flags, no `/subscriptions` list, no DELETE route.
+  Expired web subscriptions are deleted automatically when a send fails
+  (`PushNotificationManager::processReport`).
+- The web subscription is tied to the **user**, not to a team; teams are resolved when the
+  recipients are computed (rights per team).
 
-| Endpoint | Useful field(s) | Notification use |
-|---|---|---|
-| `GET /discussions/withNew` | `newPosts`, `newInfo.lastVisit` | Unread chat posts per discussion |
-| `GET /discussions/newOnly` | `{id, newPosts}` | Cheaper unread-only poll (if it works on our hosts) |
-| `GET /events` | `created?`, `createdUserId?`, `startTime`, `closeTime` | Newly created events |
-| `GET /events/withMyAttendance` | attendance array (heavy: ~11 kB/event) | Avoid for notifications |
-| `GET /polls/menu` | `status`, `voted`, `createdAt` | Polls waiting for your vote |
-| `GET /live` | currently online users | Not a notification source |
+### 2.2 VAPID
 
-**Not available:** any `/notifications`, `/push`, `/subscriptions`, webhook or mail
-endpoint; no documented `SYS:NOTIF_*` right; no server-side "unread" counter except
-`discussions/withNew`.
+- Public key (identical on `dev.tymy.cz` and `pd.tymy.cz`, read from their
+  `/public/service-worker.js`):
+  `BNFwVh2n9jBpGDMx3Kiz47ldm8GrSP74Ff4VL54v6AoPg01BnT2TtqdEXBm6M7C8Nx3PoqqPie7kESKgm8jkAog`
+- Private key lives in the server config (`%web-push%`, `Minishlink\WebPush`); it is public
+  information only as the key above.
 
-### What the dev.tymy.cz discussion must answer
+### 2.3 Push payload
 
-The API/discussion board requires a login, so these could not be checked from this
-environment. They change the design:
+`PushNotification::jsonSerialize()` sends:
 
-1. Does the **legacy app** send notifications at all (e-mail, in-app, browser)? Which
-   events trigger them (new post, new event, poll opened, attendance changed, comment on
-   my post)?
-2. Is there a **notifications table/API** behind the legacy UI (even if undocumented), and
-   a right that gates it?
-3. Does **reading a discussion** reset `newPosts` server-side, and at which call (fetching
-   `/discussion/{id}/bb/1`, opening the discussion detail, or an explicit "mark read")?
-4. Is `event.created` / `createdUserId` reliably populated, and can `created` be used in
-   `?filter=` (the query builder is generic, but this field was never exercised)?
-5. Does the server support **outbound** notifications for a team (webhook or mail), or
-   would the PWA have to provide the whole push pipeline?
-6. Is there a **per-user notification settings** API, or are the legacy settings stored
-   server-side only?
-7. Does `/polls/menu` return only open polls and a correct `voted` flag per user (it is
-   used by the poll list today)?
-
----
-
-## 3. Options considered
-
-| Option | Works offline/closed | Backend | Pros | Cons |
-|---|---|---|---|---|
-| **A. Derived in-app feed** | No | none | Ships now, no new API surface, respects existing rights | Only while the app is open/periodically polling; "new" semantics are approximations |
-| **B. Foreground `Notification`** | No | none | Native-looking toasts while the app runs | Needs permission for little benefit; duplicates A |
-| **C. Server feed + Web Push** | Yes | yes | Real unread state, works with the app closed, cross-device | Vendor work: table, endpoints, triggers, VAPID sender, subscription storage |
-| **D. Cron worker polling the API** | Partial | no | No server changes | Needs every user's session/server credentials — **not acceptable** (see §6.4) |
-
-Choose **A now**, **C later**. B and D are rejected.
-
----
-
-## 4. Phase 1 — in-app notification centre (no backend)
-
-### 4.1 Sources and rules
-
-| Type | Source | Rule | Link | Id |
-|---|---|---|---|---|
-| `discussion` | `discussions/withNew` | `newPosts > 0` | `/discussions/{id}` | `discussion:{id}` |
-| `event` | `GET /events?order=created__desc&limit=20` | `created > eventsSeenAt` and `createdUserId !== me` (fallback: `startTime` in the future when `created` is missing) | `/events/{id}` | `event:{id}` |
-| `poll` | `polls/menu` | `status === 'OPENED' && !voted` (attention item, no unread state) and `createdAt > pollsSeenAt` | `/polls/{id}` | `poll:{id}` |
-| `attendance` | pending-events query (already used by the events tab) | `closeTime - now < 48 h` and no own `preStatus`, keep the 3 nearest | `/events/{id}` | `attendance:{eventId}` |
-
-Notes:
-
-- **No event payloads with attendance** — notifications must not reuse
-  `events/withMyAttendance` (2 MB on pd). `/events` is the lightweight collection.
-- Unread count = sum of discussion `newPosts` + unseen events + unseen polls. Attendance
-  items are "to do", shown with a clock icon, not counted as unread.
-- Reading a discussion counts as reading it (the server resets `newPosts` on the first
-  page fetch — confirm point 3 above). Also drop it locally immediately.
-
-### 4.2 Seen state (`localStorage`)
-
-```ts
-// tymy:notifications:seen
+```json
 {
-  version: 1,
-  eventsAt: '2026-11-11T08:00:00.000Z', // events created after this are "new"
-  pollsAt: '2026-11-11T08:00:00.000Z',
-  discussions: { '12': '2026-11-10T19:20:00.000Z' },
-  dismissed: ['discussion:12'] // optional "mark all read" until a newer post
+  "userId": 14,          // the actor (author of the post / event change)
+  "teamId": 522,
+  "title": "Frankie posted in Oznámení",
+  "message": "first 512 chars of the post",
+  "image": "https://…",   // optional incl. "imageUrl" in older docs; server sends "image"
+  "url": "https://dev.tymy.cz/discussion/3-oznameni",  // optional, absolute legacy URL
+  "badge": 8             // optional; not populated yet (field exists, never set)
 }
 ```
 
-All writes go through one module (`src/lib/notifications.ts`) so the storage shape can be
-migrated later. Keep it small and versioned (`version` field) and never store user content.
+- `type` and `params` (discussionId) exist on the model but are **not serialised** — the
+  client only gets the fields above.
+- `message` is truncated at 512 chars because of the Web Push payload limit.
 
-### 4.3 Data flow
+### 2.4 What triggers a notification (server code)
 
-```
-useNotifications()                        (src/features/notifications/useNotifications.ts)
-  ├── useQuery(['discussions','withNew'],  stale 30 s, refetch 60 s)   ← shared key with Chat
-  ├── useQuery(['events','latest-created'], limit 20, refetch 120 s)   ← new, lightweight
-  ├── useQuery(queryKeys.menuPolls(),       refetch 120 s)             ← shared key with Polls
-  └── reads the pending-events cache from EventsPage when available
-        ↓
-  buildNotifications({ discussions, events, polls, pending, seen, me })  (pure, unit-testable)
-        ↓
-  { items: NotificationItem[], unreadCount }
-```
+| Trigger | Recipients | Title / message | `url` |
+|---|---|---|---|
+| New discussion post (`PostManager`) | users with read access to the discussion, **author excluded** | "X posted in Y" / post excerpt | `/discussion/{webName}` |
+| Event created (`EventManager`) | **players** among users allowed to view the event, author excluded | "X created new event" / "caption on date" | `/event/{webName}` |
+| Event deleted | players allowed to view, author excluded | "X deleted event" / caption | `/event` |
+| Event `startTime` changed | users allowed to view, author excluded | "X changed event time" / "starts on … (previously …)" | `/event/{webName}` |
 
-- `refetchInterval: 60_000`, and rely on TanStack's default pause while the tab is hidden;
-  the existing `visibilitychange` revalidation refreshes the session on return.
-- Reuse query keys that other screens already use so switching screens costs nothing.
-- Whole feature is client-only; no new API calls in the critical path beyond the small
-  `/events` query.
+- Sending is **synchronous** in the request (no queue, no retry beyond the `web-push`
+  flush); a failure is logged.
+- **No poll, attendance, comment-on-my-post or mention notifications.**
+- Discussions where the user cannot read never reach them; event recipients honour
+  `canView`/player status.
+- `getAllowedReaders` is per team, so the global subscriber table does not leak across
+  teams for these four triggers.
 
-### 4.4 UI
+### 2.5 What the legacy web app does (for reference)
 
-- **Bell** (header, already rendered): badge with `unreadCount`, `aria-label` "Notifikace
-  (N)", `aria-expanded`; opens a dropdown on `md+`, a full-width sheet under the header on
-  phones.
-- **Item**: type icon (`chat`, `calendar`, `poll`, `clock`), title, one-line subtitle
-  (discussion caption / event date+place / poll caption), relative time, chevron. Click →
-  navigate + mark read. The whole row is a button, not a nested link.
-- **Footer**: "Označit vše jako přečtené" and a hint when there is nothing new.
-- **Empty state**: check icon, "Žádné nové notifikace".
-- Reuse the layout's outside-click/Escape handling (`data-toggle` attribute!) and the
-  existing `.header-btn`, `.badge`, tokens. Dark mode and text size work automatically.
-- i18n: every string through `tr()`; English labels included.
+- `public/js/main.js`: registers `/public/service-worker.js` on every page and requests
+  notification permission **on page load** (no explanation).
+- `public/service-worker.js`: subscribes on SW `activate` with the VAPID key below, then
+  `POST /api/push-notification` with the subscription JSON; handles `push` with
+  `showNotification(title, {body: payload.message, icon, image: payload.image, badge})`.
+- **No `notificationclick` handler** (commented out) → clicking a notification does nothing.
+  The payload now contains `url`, so a click handler would work today.
 
-### 4.5 Rights, privacy, edge cases
+### 2.6 What the discussions established
 
-- `discussions/withNew` only returns discussions the user may read — no extra filtering.
-- `polls/menu` is already the public/open poll list.
-- Events: hide items the user `canView: false`.
-- Don't notify about your own actions (own posts bump `newPosts`? the server excludes own
-  posts from `newPosts` — verify; own events are filtered by `createdUserId`).
-- First run: initialise `eventsAt`/`pollsAt` to "now" so a fresh install is not flooded.
+| Post | Date | Takeaway |
+|---|---|---|
+| #3 / 736 | 2021-11-17 | DEV release with Web Push; VAPID public key published; only new discussion posts at first |
+| #1 / 737 | 2021-11-20 | Settings section restored; push can be tried on DEV |
+| #3 / 738–741 | 2021-11-21/23 | Native apps use Firebase/APNS; topics/keys discussed |
+| #1 / 742 | 2021-11-26 | Per-user notification settings explicitly planned as "step 2" (not done); WebPush currently notifies every accessible discussion post |
+| #1 / 744 | 2021-12-05 | FCM device registration endpoint `POST api/push-notification/fcm` |
+| #3 / 830 | 2022-09-16 | 2.4 added event create/update/delete notifications and fixed a broken SW path that stopped web notifications |
+| #1 / 752 | 2021-12-28 | iOS side "mostly functional" at that time |
 
-### 4.6 Tests
-
-- Unit (Vitest): `buildNotifications()` with fixtures — new posts, unseen event, own event,
-  voted poll, pending attendance window, empty state, malformed `created`.
-- Storage: read/write/migrate `tymy:notifications:seen`.
-- Browser smoke (headless Edge + mocked API, same harness as the other checks): badge
-  count, opening the dropdown, click-through marks read, reload keeps state, mobile sheet.
-
-### 4.7 Files (planned)
-
-```
-src/lib/notifications.ts              state, ids, buildNotifications()
-src/features/notifications/           NotificationsMenu.tsx, useNotifications.ts
-src/features/layout/Layout.tsx        bell -> menu + badge
-src/lib/i18n.ts                       new strings
-src/lib/queryClient.ts                query keys for the lightweight source
-```
-
-### 4.8 Acceptance criteria
-
-- Bell shows the correct count within 60 s of new data, and 0 after "mark all read".
-- Opening a discussion from the menu clears its badge (locally and after refetch).
-- Works in light/dark, CZ/EN, normal/large text, 390 px and 1280 px.
-- No request to `events/withMyAttendance` for notifications.
-- No console errors; offline shows the last known list.
+Everything above was confirmed in the code (`app/module/push-notification/*`,
+`PostManager.php`, `EventManager.php`) — the discussions and the implementation agree.
 
 ---
 
-## 5. Phase 2 — server feed + Web Push (needs API work)
+## 3. What is still missing (and worth asking upstream)
 
-### 5.1 Proposed API contract
+1. **No notification feed / read state** — push only. The bell cannot show history or an
+   unread count from the server; `badge` is never set.
+2. **No per-user notification settings** — neither the web settings page nor the API has
+   them (Profile → Notifikace in our app is a placeholder).
+3. **No unsubscribe endpoint** — local `pushManager.unsubscribe()` is possible, but the
+   row stays until the next failed send. Important when a *different* user logs in on the
+   same browser.
+4. **No poll/attendance notifications.**
+5. **No `type`/`id` in the payload** — only `title`, `message`, `image?`, `url?`, so the
+   client must infer routing from `url` (see §5.3).
+6. **No badge count** — `badge` exists in the model but is never populated.
+7. **Multi-team filtering** — the payload carries `teamId` and an absolute `url` with the
+   team host, but the client has no team id in `user`.
 
-```
-GET    /notifications?since=ISO&limit=50
-       → { data: [{ id, type, title, body, url, createdAt, read }] }
-POST   /notifications/read        { ids: number[] } | { until: ISO }
-GET    /notifications/state       → { unread: number }        (cheap badge poll)
-POST   /push/subscriptions        { endpoint, keys: { p256dh, auth }, userAgent }
-DELETE /push/subscriptions        { endpoint }
-PUT    /user/{id}/notifications   { newPosts: bool, newEvents: bool, attendance: bool, push: bool }
-```
-
-- Notifications are per user **and** per team (host/subdomain).
-- Type codes: `discussion_post`, `event_created`, `event_changed`, `poll_opened`,
-  `attendance_reminder`, `post_reply`.
-- `url` is app-relative (`/discussions/12`) so the SW can open/focus the right screen.
-
-### 5.2 Push pipeline
-
-1. Client: enable in settings → `Notification.requestPermission()` **on a user gesture** →
-   `subscribeToPush()` (exists) → `POST /push/subscriptions`.
-2. Server: store subscription per user/team; on a trigger, render the payload and send with
-   VAPID (`web-push` or equivalent); drop subscriptions on `404/410`.
-3. Service worker: `push` → `showNotification(title, { body, icon, badge, data: { url } })`;
-   `notificationclick` → focus an existing window or `clients.openWindow(url)`.
-   (Workbox `generateSW` needs `importScripts` or a custom SW entry.)
-4. Payload stays minimal (title/body/url/tag); no personal data beyond what the item shows.
-
-### 5.3 Security / operations
-
-- VAPID key pair per deployment; public key exposed as `VITE_VAPID_PUBLIC_KEY`; private key
-  only on the server.
-- Subscriptions belong to the authenticated user — bind them to the session, never to a
-  cookie stored in a queue.
-- Team isolation: a subscription is only addressable for the team it was created under.
-- Rate-limit subscriptions per user; expire stale endpoints; cap notifications per event
-  (e.g. one per discussion per 5 min).
-
-### 5.4 Rejected alternative
-
-A Cloudflare Worker cron that polls Tymy with stored user sessions would require keeping
-`PHPSESSID` values server-side — unacceptable. Push must be sent by (or with) the Tymy
-backend.
-
-### 5.5 Platform caveats
-
-- iOS Safari supports Web Push only for **installed** PWAs (16.4+) — the install prompt
-  matters.
-- Permission must be requested from a user gesture after explaining the benefit.
-- Test matrix: Android Chrome, iOS installed PWA, desktop Chrome/Edge/Firefox, in-app
-  browser (no push).
+A small upstream proposal is in §6.
 
 ---
 
-## 6. Roadmap
+## 4. Phase 1 — bell + derived feed (client only)
 
-1. **Verify the open questions** (§2) in the dev.tymy.cz discussion; adjust Phase 1 rules
-   if the server already tracks read state.
-2. **Phase 1**: `notifications.ts` + hook + menu + badge + tests (≈1–1.5 days).
-3. **Phase 2 client**: settings wiring, permission flow, SW handlers, subscription API
-   calls (≈1 day).
-4. **Phase 2 server**: notifications table, read endpoints, triggers, VAPID sender,
-   subscription endpoints (vendor, ≈2–3 days).
-5. Rollout: Phase 1 immediately; Phase 2 behind a build flag, enabled after the server
-   endpoints exist.
+Same design as the first draft; now complementary to push (push has no history).
 
-## 7. Risks
+### 4.1 Sources
 
-- `newPosts` semantics are the only server-side "unread" signal — if reading a discussion
-  doesn't reset it, Phase 1 needs its own high-water mark per discussion.
-- `event.created` may be missing on older records → those events appear "new" once; the
-  `eventsAt` initialisation mitigates it.
-- Poll "waiting for your vote" items are attention items, not events — keep them out of the
-  badge count so it does not look permanently unread.
-- Push depends entirely on server work; Phase 1 must not pretend to notify when the app is
-  closed.
+| Type | Source | Rule | Link |
+|---|---|---|---|
+| `discussion` | `discussions/withNew` | `newPosts > 0` | `/discussions/{id}` |
+| `event` | `GET /events?order=created__desc&limit=20` | `created > eventsAt` and not mine | `/events/{id}` |
+| `poll` | `polls/menu` | `OPENED && !voted` (attention, not unread) or `createdAt > pollsAt` | `/polls/{id}` |
+| `attendance` | pending-events query | `closeTime - now < 48 h`, no own `preStatus`, max 3 | `/events/{id}` |
 
-## 8. Sources
+Avoid `events/withMyAttendance` (heavy). Unread = discussion `newPosts` + unseen events +
+unseen polls; attendance items are "to do".
 
-- `tymy.apib` — no notification/push/webhook endpoint; poll votes/attendance/discussion
-  payloads quoted in §2.
-- `docs/SESSION_STATE.md` — verified endpoints, data quirks, `newPosts` note.
-- `src/lib/pwa.ts` — existing permission/subscription scaffolding.
-- `src/features/layout/Layout.tsx` — bell placement and menu patterns.
-- dev.tymy.cz discussion board — **not accessible from this environment**; §2 lists the
-  exact questions to resolve there.
+### 4.2 State and hook
+
+`tymy:notifications:seen` (versioned): `eventsAt`, `pollsAt`, `discussions{id:ISO}`,
+`dismissed[]`. One module `src/lib/notifications.ts` + `useNotifications()` (60 s
+`refetchInterval`, reuses existing query keys). Pure `buildNotifications()` for unit tests.
+
+### 4.3 UI
+
+Bell badge + dropdown (desktop) / sheet (mobile), item icons, relative time, deep link,
+"mark all read", empty state, i18n, dark mode. Reuse the layout's outside-click/Escape
+handling.
+
+### 4.4 Acceptance
+
+- Badge updates within 60 s; opening a discussion clears it (locally + server `newPosts`).
+- No `withMyAttendance` requests; no console errors; offline shows last state.
+
+---
+
+## 5. Phase 2 — Web Push client (uses the existing backend)
+
+### 5.1 Subscription flow (from the page, not the SW)
+
+1. Settings → Notifikace (or a bell-menu entry) explains the benefit; a **button** requests
+   permission (never on page load, unlike the legacy app).
+2. `navigator.serviceWorker.ready` → `pushManager.getSubscription()`; reuse if present.
+3. Otherwise `subscribe({ userVisibleOnly: true, applicationServerKey: <VAPID> })`.
+4. `POST /api/push-notification` through the app's API client with the **raw subscription
+   JSON** as the body (`request('/push-notification', {method:'POST', body: JSON.stringify(sub)}`) —
+   our client adds `X-Session-Key`, the Pages Function turns it into the cookie.
+5. Persist `tymy:push:enabled` and the subscription endpoint for the UI state.
+
+Note: our service worker **cannot read `localStorage`**, so the subscription must be posted
+from the page (the legacy app does it in the SW only because it relies on cookies).
+
+### 5.2 Service worker
+
+`vite-plugin-pwa` is currently in `generateSW` mode. Options:
+
+- keep `generateSW` and add `workbox.importScripts: ['push-sw.js']` (a small hand-written SW
+  with `push`/`notificationclick`), or
+- switch to `injectManifest` with a custom `src/sw.ts` (more control, keeps precache).
+
+Handlers:
+
+```js
+self.addEventListener('push', event => {
+  const payload = event.data?.json() ?? {}
+  event.waitUntil(self.registration.showNotification(payload.title ?? 'tymy.cz', {
+    body: payload.message ?? '',
+    icon: '/icons/icon-192.png',
+    image: payload.image,
+    badge: '/favicon-32.png',
+    data: { url: payload.url ?? '/' },
+    tag: payload.url ?? undefined
+  }))
+})
+
+self.addEventListener('notificationclick', event => {
+  event.notification.close()
+  const url = toAppUrl(event.notification.data?.url)
+  event.waitUntil((async () => {
+    const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    for (const client of clients) {
+      await client.focus()
+      return client.navigate(url)
+    }
+    return self.clients.openWindow(url)
+  })())
+})
+```
+
+### 5.3 Deep links
+
+`url` is an absolute **legacy web** URL: `https://dev.tymy.cz/discussion/3-oznameni` or
+`…/event/57-caption`. Map by path:
+
+| Legacy path | PWA route |
+|---|---|
+| `/discussion/{id}-…` | `/discussions/{id}` |
+| `/event/{id}-…` | `/events/{id}` |
+| `/event` or `/event/` | `/events` |
+| anything else | `/events` |
+
+Only the path matters — the host is the team vhost, while the PWA may run on
+`tymy-pwa.pages.dev`. Ignore `teamId` for now (see §3.7).
+
+### 5.4 Logout / user switch
+
+Without a DELETE endpoint:
+
+- On logout, call `pushManager.unsubscribe()` and clear `tymy:push:enabled`, so the next
+  user on that browser is not subscribed to the previous user's pushes (the server row stays
+  until a failed send).
+- On login, the notification UI offers to re-subscribe.
+
+This is a behaviour decision: alternatively keep the subscription and let the server prune
+it when the push fails (bad for shared devices). Recommend unsubscribe on logout.
+
+### 5.5 Testing
+
+- Desktop Chrome/Edge: DevTools → Application → Service Workers → "Push" with the payload
+  JSON; or `web-push send-notification` with the subscription and VAPID keys.
+- Real end-to-end: log in on DEV, enable push, have another account post in a discussion
+  (do **not** post as the same user — the author is excluded).
+- Android Chrome + iOS installed PWA (16.4+), light/dark icon rendering.
+- Verify a click opens the mapped route and focuses an existing tab.
+
+### 5.6 Acceptance
+
+- Enabling push creates exactly one `WEB` subscriber and survives reloads (getSubscription
+  reuse).
+- A new post by another user produces a notification with title/message; clicking opens the
+  discussion.
+- Event create / time change / delete notifications arrive (server-side triggers).
+- No notification for the author's own actions.
+- Logout unsubscribes locally; a second login can re-enable.
+
+---
+
+## 6. Optional server upgrades (upstream proposal)
+
+1. Serialise `type` and the `params` (e.g. `discussionId`) in the payload; add `badge` with
+   a real unread count; include a stable `notification id`.
+2. `GET /notifications` + `POST /notifications/read` (per user/team) — enables a real bell
+   feed and read state.
+3. `DELETE /api/push-notification/{id}` (or by endpoint) — proper unsubscribe.
+4. Per-user preferences (`PUT /user/{id}/notifications`) and honouring them when sending.
+5. Poll opened / attendance deadline / mention triggers.
+6. Team-scope subscribers or send `teamId` + a client-visible team id, so one browser can
+   filter pushes from other teams the user belongs to.
+7. `notificationclick` handling in the legacy SW (it already has `url`).
+
+---
+
+## 7. Suggested order
+
+1. **Phase 2 first** (0.5–1 day): it is the feature people asked for and needs no server
+   changes. Ship behind the Settings toggle.
+2. **Phase 1** (1–1.5 days): bell badge + derived list for when the app is open.
+3. Optional upstream items, starting with payload `type`/`badge` and a DELETE route.
+
+## 8. Risks / caveats
+
+- iOS Web Push works only for an **installed** PWA; the permission prompt must come from a
+  user gesture.
+- The subscription is per browser+user, but the server row is not tied to a device session;
+  shared browsers need the logout unsubscribe.
+- Push has no history: if the user misses the notification, there is nothing in the app
+  (Phase 1 mitigates this).
+- `message` is capped at 512 characters and the title is English-ish (server-generated).
+- A staging/production PWA served from `pages.dev` gets `url`s pointing at the team host;
+  route mapping ignores the host.
+- The VAPID key is global; if it ever changes, every subscription must be renewed.
+
+## 9. Sources
+
+- dev.tymy.cz discussions (logged in): `#1` posts 737, 742, 744, 752; `#3` posts 736–741,
+  830; `#2` test posts 746–751, 759; `#4` general API posts.
+- `https://dev.tymy.cz/public/service-worker.js` and `/public/js/main.js` (legacy client).
+- `github.com/KminekMatej/tymy` (`develop`):
+  `app/module/push-notification/*`, `app/module/discussion/manager/PostManager.php`,
+  `app/module/event/manager/EventManager.php`.
+- Live probes: `POST /api/login`, `GET /api/push-notification*` (405 = POST-only),
+  `/api/notifications` (404), `/api/user/31` (no notification fields).
