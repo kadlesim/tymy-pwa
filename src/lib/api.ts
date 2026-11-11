@@ -646,6 +646,17 @@ export async function getUser(id: number): Promise<User> {
   return request<User>(`/user/${id}`)
 }
 
+/**
+ * Registers a Web Push subscription for the logged-in user. The API expects the raw
+ * `PushSubscription` JSON as the body (`POST /api/push-notification`).
+ */
+export async function registerPushSubscription(subscription: PushSubscriptionJSON): Promise<void> {
+  await request('/push-notification', {
+    method: 'POST',
+    body: JSON.stringify(subscription)
+  })
+}
+
 export async function updateUser(id: number, user: Partial<User>): Promise<User> {
   return request<User>(`/user/${id}`, {
     method: 'PUT',

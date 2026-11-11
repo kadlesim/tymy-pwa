@@ -1,7 +1,8 @@
 # Notifications — implementation plan
 
-> **Status: plan only.** No notification code has been written. The bell in the header is
-> still decorative and the Profile → Notifikace toggles are placeholders.
+> **Status: implemented (phases 1 + 2).** The bell now lists derived notifications and the
+> app can subscribe to Web Push (settings button / bell footer). What remains is server-side
+> polish (feed/read state, badge, prefs, poll triggers) — see §3 and §6.
 
 This plan was revised after reading the **dev.tymy.cz discussions** (account supplied by the
 owner) and the **open-source server** (`github.com/KminekMatej/tymy`, branch `develop`).
@@ -294,6 +295,12 @@ it when the push fails (bad for shared devices). Recommend unsubscribe on logout
    changes. Ship behind the Settings toggle.
 2. **Phase 1** (1–1.5 days): bell badge + derived list for when the app is open.
 3. Optional upstream items, starting with payload `type`/`badge` and a DELETE route.
+
+**Implemented in `src/`:** `lib/notifications.ts` (seen state + `buildNotifications`),
+`features/notifications/` (hook, bell menu), `lib/push.ts` (subscription lifecycle),
+`public/push-sw.js` (push + click handlers, merged via `workbox.importScripts`), settings
+block in `Profile → Nastavení → Notifikace`. Push is unsubscribed on logout; deep links map
+`/discussion/{id}-…` → `/discussions/{id}` and `/event/{id}-…` → `/events/{id}`.
 
 ## 8. Risks / caveats
 

@@ -29,6 +29,10 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 - **Preferences**: dark mode, Czech/English UI and a larger text size — icons next to the
   bell on desktop, the same controls in the drawer on phones, plus Profile → Nastavení →
   Vzhled (§5).
+- **Notifications**: bell menu with a derived feed (new discussion posts, new events, polls
+  waiting for a vote) and **Web Push** — enable in Profile → Nastavení → Notifikace or from
+  the bell; the SW shows the notification and opens the mapped route; logging out
+  unsubscribes this browser. Plan and backend contract: `docs/NOTIFICATIONS_PLAN.md`.
 - **Team selection** before login (`/team`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
 - **App/PWA icons and the favicon are generated from `logo2.png`** (`npm run icons`).
@@ -171,6 +175,8 @@ src/
 │   ├── auth.ts         reactive auth store (login/register/logout/reset, guards)
 │   ├── captions.ts     i18n with built-in Czech defaults
 │   ├── i18n.ts         `tr()` for hard-coded UI strings (Czech source → English)
+│   ├── notifications.ts derived bell feed + per-user seen state
+│   ├── push.ts         Web Push subscription lifecycle (VAPID, /push-notification)
 │   ├── prefs.ts        theme / language / text size (localStorage + <html>)
 │   ├── team.ts         team (subdomain) selection, stored as `tymy:team`
 │   ├── bbcode.ts       safe BBCode ↔ HTML
@@ -194,6 +200,7 @@ src/
 │   ├── files/          FilesPage (explains the missing file API, links to legacy /file)
 │   ├── reports/        ReportsPage (players × events attendance matrix + XLSX export)
 │   ├── notes/          NotesPage (implemented, **not routed**)
+│   ├── notifications/  NotificationBell (menu + push toggle), useNotifications
 │   └── layout/         Layout (header desktop nav + drawer + mobile bottom nav)
 ├── app.tsx             routes + auth guards (incl. loading splash)
 ├── main.tsx            entry
@@ -359,6 +366,26 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   `users/status/*` calls (each settled independently, so one 403 doesn't erase the rest),
   then `GET /user/{id}` per missing id — so the table avoids "Uživatel 106" whenever the
   API allows reading the user at all.
+- **Notifications** (bell in the header, `features/notifications/`):
+  - Derived feed, because the server has no notification feed: unread discussions
+    (`discussions/withNew`, unread = `newPosts` above a per-discussion high-water mark),
+    events created since the stored `lastEventId` (`GET /events?order=id&limit=20`, own
+    creations excluded) and open polls not voted in (attention items, not counted in the
+    badge). Attendance reminders are **not** included.
+  - Seen state: `tymy:notifications:seen:{userId}` = `{discussions: {id: newPosts},
+    lastEventId, dismissedEvents[]}`. The first run stores the newest event id instead of
+    flooding the menu; badge = unread discussions + unseen events; "mark all read" bumps the
+    high-water marks. Queries poll 60/120 s and reuse existing query keys.
+  - **Web Push** uses the existing server: VAPID public key (same on dev/pd),
+    `POST /api/push-notification` with the raw subscription JSON, payload
+    `{title, message, image?, url?}`. The subscription is created from the page (a SW cannot
+    read `localStorage`), re-posted after login (`syncPushSubscription`) and unsubscribed on
+    logout.
+  - `public/push-sw.js` is merged into the generated Workbox worker via
+    `workbox.importScripts`; it shows the notification and maps the legacy `url` to an SPA
+    route (`/discussion/{id}-…` → `/discussions/{id}`, `/event/{id}-…` → `/events/{id}`).
+  - Server triggers: new discussion posts and event create/time-change/delete, never the
+    author; no read state, badge or per-user preferences server-side.
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -494,6 +521,14 @@ smoke test confirmed:
   `favicon-32`; `maskable-512` and `apple-touch-icon` stay opaque). Roster search found
   "Jan Novák" from `777222` against `+420 777 222 333` (1 row). In dark mode the muted text
   resolves to `rgb(163, 171, 179)`. **0 console errors**.
+- Notifications (mock API): badge showed 3 (one discussion with 3 new posts + two unseen
+  events), the menu listed the discussion, both events and the open poll ("Hlasujte v
+  anketě"); clicking the discussion navigated to `/discussions/1`, wrote
+  `tymy:notifications:seen:31` and dropped the badge to 2. Settings shows the push block
+  (dev: "Nedostupné" because no SW registration; production offers the button).
+  `dist/sw.js` contains `importScripts("/push-sw.js")` and `dist/push-sw.js` exists.
+  **0 console errors.** Not exercised live: a real push delivery (needs a second account)
+  and the iOS installed-PWA flow.
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.
@@ -529,13 +564,10 @@ smoke test confirmed:
    Playwright/Vitest browser for login → events → RSVP.
 8. **App icons** are generated from `logo2.png` (`npm run icons`, sharp); the procedural
    placeholders and `favicon.svg` are gone.
-9. **Notifications — planned, not implemented.** Full plan in
-   **`docs/NOTIFICATIONS_PLAN.md`**. The server **already implements Web Push** (VAPID,
-   `POST /api/push-notification`, payload `{title,message,image?,url?}`, triggers: new
-   discussion post, event create/time-change/delete), so Phase 2 is client-only: subscribe
-   + SW `push`/`notificationclick` + deep links. Phase 1 (bell badge/menu) is still
-   client-derived because there is no notification feed or read state. Details, payloads
-   and the upstream wish list are in the plan.
+9. **Notifications — implemented (client).** Bell feed + Web Push are live (see
+   `docs/NOTIFICATIONS_PLAN.md` and §5). Remaining server-side wishes: a feed/read API, a
+   real `badge`, per-user preferences, poll/attendance triggers and a DELETE subscription
+   endpoint.
 10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
     Cloudflare Pages + the two Pages Functions, `TYMY_DEFAULT_TEAM=pd`. Remaining follow-ups:
     log in there once for real (writes were only tested against dev/pd locally), add a
@@ -638,6 +670,15 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
 - **Two icons must stay opaque**: `maskable-512.png` (Android masks it against the
   launcher) and `apple-touch-icon.png` (iOS composites transparency onto black). The other
   icons, shortcuts and favicons keep the logo's transparency on purpose.
+- **A service worker cannot read `localStorage`** — create the push subscription from the
+  page and POST it through the API client (`X-Session-Key`). The SW only renders pushes.
+- **Web Push handlers are merged via `workbox.importScripts`** (`public/push-sw.js`); keep
+  that file at the public root and register listeners with `self.addEventListener`.
+- **The push payload is legacy-shaped**: `title`, `message`, `image?`, `url?`; `url` is an
+  absolute web URL, so map it by path. The author never receives their own notifications and
+  there is no server read state — the bell derives unread itself.
+- **The VAPID public key is global** (`BNFw…`); the private key stays server-side. If the key
+  changes, every subscription must be recreated.
 - **Optimistic chat posts** carry a negative id and live at the front of `pages[0].posts`
   (page 1 is newest-first). Replace the placeholder in `onSuccess` and mark the chat query
   stale with `refetchType: 'none'` — a full invalidation refetches every loaded page and

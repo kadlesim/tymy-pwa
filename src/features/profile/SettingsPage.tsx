@@ -1,10 +1,16 @@
 ﻿// App settings page
 
-import { createSignal, For, Show } from 'solid-js'
+import { createSignal, For, onMount, Show } from 'solid-js'
 import { doLogout } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { theme, setTheme, textSize, setTextSize, lang, setLang } from '../../lib/prefs'
+import {
+  disablePush,
+  enablePush,
+  getPushState,
+  type PushState
+} from '../../lib/push'
 
 type Section = 'notifications' | 'privacy' | 'appearance' | 'account'
 
@@ -30,6 +36,38 @@ function Toggle(props: { default?: boolean }) {
 export default function SettingsPage() {
   const { tProfile, tAuth } = useCommonCaptions()
   const [section, setSection] = createSignal<Section>('notifications')
+
+  const [pushState, setPushState] = createSignal<PushState>('unsupported')
+  const [pushBusy, setPushBusy] = createSignal(false)
+  const [pushError, setPushError] = createSignal<string | null>(null)
+
+  const refreshPushState = async () => {
+    setPushState(await getPushState())
+  }
+
+  onMount(() => {
+    void refreshPushState()
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then(() => void refreshPushState()).catch(() => {})
+    }
+  })
+
+  const togglePush = async () => {
+    setPushBusy(true)
+    setPushError(null)
+    try {
+      if (pushState() === 'subscribed') {
+        await disablePush()
+      } else {
+        const next = await enablePush()
+        if (next === 'denied') setPushError(tr('Notifikace jsou v prohlížeči zakázané.'))
+        else if (next !== 'subscribed') setPushError(tr('Notifikace se nepodařilo zapnout.'))
+      }
+      await refreshPushState()
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   const handleLogout = async () => {
     if (confirm(tr('Opravdu se chcete odhlásit?'))) {
@@ -66,19 +104,53 @@ export default function SettingsPage() {
         <div class="flex-1 bg-elevated rounded-xl border border-border p-6">
           <Show when={section() === 'notifications'}>
             <h2 class="text-lg font-semibold text-text mb-4">{tr('Notifikace')}</h2>
-            <div class="space-y-3 text-sm">
-              <label class="flex items-center justify-between">
-                <span class="text-text">{tr('Push notifikace pro nové zprávy')}</span>
-                <Toggle />
-              </label>
-              <label class="flex items-center justify-between">
-                <span class="text-text">{tr('Nové události a změny účastí')}</span>
-                <Toggle />
-              </label>
-              <label class="flex items-center justify-between">
-                <span class="text-text">{tr('Připomínky událostí')}</span>
-                <Toggle default={false} />
-              </label>
+            <div class="space-y-4 text-sm">
+              <div class="flex items-start justify-between gap-4">
+                <div class="min-w-0">
+                  <p class="font-medium text-text">{tr('Push notifikace')}</p>
+                  <p class="text-xs text-muted mt-1">
+                    {tr('Server posílá notifikace pro nové příspěvky v diskuzích a pro nové nebo změněné události.')}
+                  </p>
+                </div>
+                <Show
+                  when={pushState() !== 'unsupported'}
+                  fallback={
+                    <span class="badge bg-secondary-light text-secondary flex-shrink-0">
+                      {tr('Nedostupné')}
+                    </span>
+                  }
+                >
+                  <button
+                    type="button"
+                    class="btn btn-sm btn-secondary flex-shrink-0"
+                    disabled={pushBusy()}
+                    onClick={togglePush}
+                  >
+                    {pushBusy()
+                      ? tr('Ukládám…')
+                      : pushState() === 'subscribed'
+                        ? tr('Vypnout notifikace')
+                        : tr('Zapnout notifikace')}
+                  </button>
+                </Show>
+              </div>
+
+              <Show when={pushState() === 'subscribed'}>
+                <p class="text-xs text-success">{tr('Notifikace jsou v tomto prohlížeči zapnuté.')}</p>
+              </Show>
+              <Show when={pushState() === 'denied'}>
+                <p class="text-xs text-danger">{tr('Notifikace jsou v prohlížeči zakázané.')}</p>
+              </Show>
+              <Show when={pushState() === 'unsupported'}>
+                <p class="text-xs text-muted">{tr('Tento prohlížeč notifikace nepodporuje.')}</p>
+              </Show>
+              <Show when={pushError()}>
+                <p class="text-xs text-danger">{pushError()}</p>
+              </Show>
+
+              <p class="text-xs text-muted border-t border-border-light pt-3">
+                {tr('Na iPhonu fungují notifikace jen v aplikaci nainstalované na plochu.')}
+              </p>
             </div>
           </Show>
 

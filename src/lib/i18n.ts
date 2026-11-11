@@ -414,6 +414,26 @@ const EN: Record<string, string> = {
   'Žádní uživatelé': 'No users',
   'V této skupině nejsou žádní členové.': 'There are no members in this group.',
 
+  // Notifications
+  'Notifikace ({n})': 'Notifications ({n})',
+  'Notifikace se nepodařilo načíst.': 'Could not load notifications.',
+  'Notifikace se nepodařilo zapnout.': 'Could not enable notifications.',
+  'Notifikace jsou v prohlížeči zakázané.': 'Notifications are blocked in the browser.',
+  'Notifikace jsou v tomto prohlížeči zapnuté.': 'Notifications are enabled in this browser.',
+  'Žádné nové notifikace': 'No new notifications',
+  'Označit vše jako přečtené': 'Mark all as read',
+  'Zapnout notifikace': 'Turn on notifications',
+  'Vypnout notifikace': 'Turn off notifications',
+  'Push notifikace': 'Push notifications',
+  'Nedostupné': 'Unavailable',
+  'Tento prohlížeč notifikace nepodporuje.': 'This browser does not support notifications.',
+  'Na iPhonu fungují notifikace jen v aplikaci nainstalované na plochu.':
+    'On iPhone, notifications only work in the app installed to the home screen.',
+  'Server posílá notifikace pro nové příspěvky v diskuzích a pro nové nebo změněné události.':
+    'The server sends notifications for new discussion posts and for new or rescheduled events.',
+  '{n} nových příspěvků': '{n} new posts',
+  'Hlasujte v anketě': 'Vote in this poll',
+
   // API errors
   'Neplatná odpověď serveru': 'Invalid server response',
   'Platnost přihlášení vypršela': 'Your session has expired',

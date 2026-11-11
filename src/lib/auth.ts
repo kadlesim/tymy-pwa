@@ -20,6 +20,7 @@ import {
   getUser,
   onUnauthorized
 } from './api'
+import { syncPushSubscription, unsubscribeOnLogout } from './push'
 import { queryClient } from './queryClient'
 
 // ============================================
@@ -105,6 +106,8 @@ export async function initAuth(): Promise<void> {
             isAuthenticated: true,
             roles: user.roles
           })
+          // Re-register the browser push subscription if this device had it enabled.
+          void syncPushSubscription()
         } else {
           dropSession(true)
         }
@@ -172,6 +175,7 @@ export async function doLogin(loginName: string, password: string): Promise<User
       isAuthenticated: true,
       roles: response.data.roles
     })
+    void syncPushSubscription()
     return response.data
   } catch (error) {
     setAuthState(prev => ({ ...prev, isLoading: false }))
@@ -201,6 +205,8 @@ export async function doRegister(data: {
 
 export async function doLogout(): Promise<void> {
   setAuthState(prev => ({ ...prev, isLoading: true }))
+  // Stop this browser from receiving the previous user's notifications.
+  await unsubscribeOnLogout()
   try {
     await logout()
   } catch (error) {

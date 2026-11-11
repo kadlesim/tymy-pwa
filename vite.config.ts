@@ -89,6 +89,8 @@ export default defineConfig({
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Web Push handlers (push / notificationclick) merged into the generated SW.
+        importScripts: ['/push-sw.js'],
         runtimeCaching: [
           {
             // Same-origin API (production default base path `/api`).

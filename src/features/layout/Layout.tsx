@@ -5,6 +5,7 @@ import { useLocation, useNavigate, A } from '@solidjs/router'
 import { useAuth, doLogout, getDisplayName, getUserAvatar } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../../lib/icons'
+import NotificationBell from '../notifications/NotificationBell'
 import { theme, setTheme, toggleTheme, textSize, setTextSize, toggleTextSize, lang, setLang } from '../../lib/prefs'
 import { tr } from '../../lib/i18n'
 
@@ -159,9 +160,7 @@ export default function Layout(props: LayoutProps) {
             </button>
           </div>
 
-          <button class="header-btn p-2 rounded-lg hover:bg-100" aria-label={tr('Notifikace')}>
-            <span class="icon" innerHTML={ICONS['bell']} />
-          </button>
+          <NotificationBell />
 
           <div class="user-menu relative">
             <button
