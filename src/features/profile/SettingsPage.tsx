@@ -113,7 +113,7 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <Show
-                  when={pushState() !== 'unsupported'}
+                  when={pushState() === 'off' || pushState() === 'subscribed' || pushState() === 'denied'}
                   fallback={
                     <span class="badge bg-secondary-light text-secondary flex-shrink-0">
                       {tr('Nedostupné')}
@@ -123,7 +123,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     class="btn btn-sm btn-secondary flex-shrink-0"
-                    disabled={pushBusy()}
+                    disabled={pushBusy() || pushState() === 'denied'}
                     onClick={togglePush}
                   >
                     {pushBusy()
@@ -143,6 +143,12 @@ export default function SettingsPage() {
               </Show>
               <Show when={pushState() === 'unsupported'}>
                 <p class="text-xs text-muted">{tr('Tento prohlížeč notifikace nepodporuje.')}</p>
+              </Show>
+              <Show when={pushState() === 'insecure'}>
+                <p class="text-xs text-muted">{tr('Notifikace vyžadují zabezpečené připojení (HTTPS).')}</p>
+              </Show>
+              <Show when={pushState() === 'no-sw'}>
+                <p class="text-xs text-muted">{tr('Notifikace nejsou v tomto prostředí dostupné.')}</p>
               </Show>
               <Show when={pushError()}>
                 <p class="text-xs text-danger">{pushError()}</p>

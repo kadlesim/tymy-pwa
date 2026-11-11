@@ -384,6 +384,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - `public/push-sw.js` is merged into the generated Workbox worker via
     `workbox.importScripts`; it shows the notification and maps the legacy `url` to an SPA
     route (`/discussion/{id}-…` → `/discussions/{id}`, `/event/{id}-…` → `/events/{id}`).
+  - Push states: `unsupported` (Push/Notification APIs missing), `insecure` (non-HTTPS
+    origin other than localhost), `no-sw` (no service-worker registration, e.g. the Vite dev
+    server), `denied`, `off`, `subscribed`. Test with `npm run build && npm run preview` or
+    the deployed app — Firefox supports Web Push on HTTPS/localhost, private windows block
+    service workers, iOS requires an installed PWA.
   - Server triggers: new discussion posts and event create/time-change/delete, never the
     author; no read state, badge or per-user preferences server-side.
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
@@ -679,6 +684,10 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   there is no server read state — the bell derives unread itself.
 - **The VAPID public key is global** (`BNFw…`); the private key stays server-side. If the key
   changes, every subscription must be recreated.
+- **The Vite dev server has no service worker** (VitePWA `devOptions` are off), so push shows
+  `no-sw` / "notifications are not available in this environment". Test with
+  `npm run build && npm run preview` or the deployment. Firefox's permission popup does not
+  need a SW (foreground notifications), but **push** does.
 - **Optimistic chat posts** carry a negative id and live at the front of `pages[0].posts`
   (page 1 is newest-first). Replace the placeholder in `onSuccess` and mark the chat query
   stale with `refetchType: 'none'` — a full invalidation refetches every loaded page and

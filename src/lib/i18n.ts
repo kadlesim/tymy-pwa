@@ -427,6 +427,10 @@ const EN: Record<string, string> = {
   'Push notifikace': 'Push notifications',
   'Nedostupné': 'Unavailable',
   'Tento prohlížeč notifikace nepodporuje.': 'This browser does not support notifications.',
+  'Notifikace vyžadují zabezpečené připojení (HTTPS).':
+    'Notifications require a secure connection (HTTPS).',
+  'Notifikace nejsou v tomto prostředí dostupné.':
+    'Notifications are not available in this environment.',
   'Na iPhonu fungují notifikace jen v aplikaci nainstalované na plochu.':
     'On iPhone, notifications only work in the app installed to the home screen.',
   'Server posílá notifikace pro nové příspěvky v diskuzích a pro nové nebo změněné události.':

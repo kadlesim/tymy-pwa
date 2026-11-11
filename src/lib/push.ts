@@ -13,7 +13,7 @@ const VAPID_PUBLIC_KEY =
 
 const ENABLED_KEY = 'tymy:push:enabled'
 
-export type PushState = 'unsupported' | 'denied' | 'off' | 'subscribed'
+export type PushState = 'unsupported' | 'insecure' | 'no-sw' | 'denied' | 'off' | 'subscribed'
 
 function readEnabled(): boolean {
   try {
@@ -62,10 +62,12 @@ async function getRegistration(): Promise<ServiceWorkerRegistration | null> {
 
 export async function getPushState(): Promise<PushState> {
   if (!isPushSupported()) return 'unsupported'
+  // Push requires a secure context; localhost is exempt, a LAN IP over HTTP is not.
+  if (typeof window !== 'undefined' && !window.isSecureContext) return 'insecure'
   if (Notification.permission === 'denied') return 'denied'
 
   const registration = await getRegistration()
-  if (!registration) return 'unsupported'
+  if (!registration) return 'no-sw'
 
   try {
     const subscription = await registration.pushManager.getSubscription()
@@ -87,8 +89,8 @@ export async function enablePush(): Promise<PushState> {
 
   const registration = await getRegistration()
   if (!registration) {
-    // No service worker (dev server): subscriptions cannot be created there.
-    return 'unsupported'
+    // No service worker (Vite dev server): subscriptions cannot be created there.
+    return 'no-sw'
   }
 
   try {

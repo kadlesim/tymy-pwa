@@ -176,7 +176,7 @@ export default function NotificationBell() {
                 {tr('Označit vše jako přečtené')}
               </button>
             </Show>
-            <Show when={pushState() !== 'unsupported' && pushState() !== 'denied'}>
+            <Show when={pushState() === 'off' || pushState() === 'subscribed'}>
               <button
                 type="button"
                 class="btn btn-sm btn-secondary w-full"
@@ -188,6 +188,15 @@ export default function NotificationBell() {
             </Show>
             <Show when={pushState() === 'denied'}>
               <p class="text-xs text-muted">{tr('Notifikace jsou v prohlížeči zakázané.')}</p>
+            </Show>
+            <Show when={pushState() === 'unsupported'}>
+              <p class="text-xs text-muted">{tr('Tento prohlížeč notifikace nepodporuje.')}</p>
+            </Show>
+            <Show when={pushState() === 'insecure'}>
+              <p class="text-xs text-muted">{tr('Notifikace vyžadují zabezpečené připojení (HTTPS).')}</p>
+            </Show>
+            <Show when={pushState() === 'no-sw'}>
+              <p class="text-xs text-muted">{tr('Notifikace nejsou v tomto prostředí dostupné.')}</p>
             </Show>
             <Show when={pushError()}>
               <p class="text-xs text-danger">{pushError()}</p>
