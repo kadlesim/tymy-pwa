@@ -23,6 +23,7 @@ import {
   type EventType
 } from '../../lib/api'
 import { invalidateEvents } from '../../lib/queryClient'
+import { isAdmin } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { formatApiDate, formatDisplayDate, formatDisplayTime } from '../../lib/date-filters'
@@ -320,10 +321,12 @@ export default function EventsManagePage() {
             <span class="icon-sm" innerHTML={ICONS['back']} />
             {tr('Zpět na události')}
           </A>
-          <A href="/events/create" class="btn btn-primary">
-            <span class="icon-sm" innerHTML={ICONS['plus']} />
-            {tr('Nová událost')}
-          </A>
+          <Show when={isAdmin()}>
+            <A href="/events/create" class="btn btn-primary">
+              <span class="icon-sm" innerHTML={ICONS['plus']} />
+              {tr('Nová událost')}
+            </A>
+          </Show>
         </div>
       </div>
 

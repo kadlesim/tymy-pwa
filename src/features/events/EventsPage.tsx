@@ -16,7 +16,7 @@ import {
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
-import { useAuth } from '../../lib/auth'
+import { useAuth, isAdmin } from '../../lib/auth'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
 import { STATUS_COLORS, STATUS_LABELS } from './constants'
@@ -232,10 +232,12 @@ export default function EventsPage() {
               <span class="icon-sm" innerHTML={ICONS['settings']} />
               {tr('Správa')}
             </A>
-            <A href="/events/create" class="btn btn-primary">
-              <span class="icon-sm" innerHTML={ICONS['plus']} />
-              {tr('Nová událost')}
-            </A>
+            <Show when={isAdmin()}>
+              <A href="/events/create" class="btn btn-primary">
+                <span class="icon-sm" innerHTML={ICONS['plus']} />
+                {tr('Nová událost')}
+              </A>
+            </Show>
           </div>
         </div>
 

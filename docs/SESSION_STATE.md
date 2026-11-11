@@ -32,7 +32,7 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
   Vzhled (§5).
 - **Team selection** before login (`/team`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
-- **App/PWA icons and the favicon are generated from `logo.png`** (`npm run icons`).
+- **App/PWA icons and the favicon are generated from `logo2.png`** (`npm run icons`).
 
 **Deployment is live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`.
 `functions/` (Pages Functions for `/api` and `/user_pics`), `public/_redirects` (SPA
@@ -198,7 +198,7 @@ src/
 ```
 
 Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.cjs`,
-`tsconfig.json` (`noEmit: true`), `scripts/generate-icons.mjs` (sharp, reads `logo.png`).
+`tsconfig.json` (`noEmit: true`), `scripts/generate-icons.mjs` (sharp, reads `logo2.png`).
 
 ---
 
@@ -213,8 +213,14 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   Below the filters sits a **series builder**: caption/type/place/link/description, weekday
   chips, date range, start time, duration and close offset; it previews the generated
   dates and posts an **array** to `POST /events/create` (the endpoint is natively bulk)
-  with a 200-event cap. The events page links to it via "Správa" next to "Nová událost",
-  and `/events/create` is now reachable from there too.
+  with a 200-event cap. The events page links to it via "Správa"; the single-event
+  "Nová událost" button next to it is admin-only (§5).
+- **Creating a single event is admin-only**: the "Nová událost" buttons (events page and
+  management page) render only for `isAdmin()` (the user's `roles` contain `SUPER`). The
+  API exposes no global `SYS:EVE_CREATE` flag, so the role is the proxy; the server still
+  enforces the right. `/events/create` remains reachable by URL. The series builder on
+  `/events/manage` is **not** gated (only the single-event button was requested) — say the
+  word if it should follow the same rule.
 - **Preferences** (`src/lib/prefs.ts`): `tymy:theme` (`light|dark`), `tymy:lang`
   (`cs|en`) and `tymy:text-size` (`normal|large`), applied to `<html>` by `initPrefs()`
   before the first render (no flash of the wrong theme). Controls: three icon buttons next
@@ -400,7 +406,7 @@ smoke test confirmed:
   **mocked API** (fetch override injected before boot, session seeded in `localStorage`) —
   no real team data touched. Checked at 1280×900 and 390×844: table, selection bar
   ("Vybráno 2" → "Smazat vybrané (2)"), series builder (9 Wednesdays previewed) and the
-  events header ("Správa", "Nová událost", "Seznam"/"Kalendář") all render; select
+  events header ("Správa", admin-only "Nová událost") all render; select
   bindings resolve to `2026` / `all`; **0 console errors**.
 - Fixed during the check: the search field's magnifier overlapped the placeholder because
   `.input` (defined after `@tailwind utilities`) overrides `pl-8` — padding is now inline.
@@ -416,8 +422,11 @@ smoke test confirmed:
 - Light/Czech regression pass on `/events` and `/events/manage`: selects bind, icon-only
   view switch reachable through `aria-label`, **0 console errors**.
 - `npm run build` clean; `npm run icons` generated every manifest size plus
-  `favicon-32.png`, `favicon-192.png` and `apple-touch-icon.png` from `logo.png`.
+  `favicon-32.png`, `favicon-192.png` and `apple-touch-icon.png` from `logo2.png`.
 - Also fixed while there: the two remaining emoji glyphs (🔑, 👁) became MDI `lock`/`eye`.
+- After switching the icon source to the square `logo2.png`, the icons were regenerated
+  (flattened onto white, maskable padded) and the "Nová událost" buttons hidden in the
+  mocked session (`roles: []`), so the admin-only rule is exercised.
 
 ---
 
@@ -448,7 +457,7 @@ smoke test confirmed:
    TEXT/NUMBER semantics could differ from server expectations.
 7. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
    Playwright/Vitest browser for login → events → RSVP.
-8. **App icons** are generated from `logo.png` (`npm run icons`, sharp); the procedural
+8. **App icons** are generated from `logo2.png` (`npm run icons`, sharp); the procedural
    placeholders and `favicon.svg` are gone.
 9. **Push notifications** need a backend VAPID key + subscription endpoint.
 10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
@@ -464,8 +473,11 @@ smoke test confirmed:
 13. **i18n** covers the UI; server data (event type captions, status captions, discussion
     posts, names) stays in the team's language. Missing `tr()` keys fall back to Czech
     silently, so add entries to `src/lib/i18n.ts` with every new string.
-14. **`npm run icons` needs `logo.png`** in the repo root and the `sharp` devDependency;
-    it rewrites `public/icons/*` plus the favicons.
+14. **`npm run icons` needs `logo2.png`** (square) in the repo root and the `sharp`
+    devDependency; it rewrites `public/icons/*` plus the favicons.
+15. **Event creation is gated by `isAdmin()`** (`SUPER` role), not by the real
+    `SYS:EVE_CREATE` right — no API flag exists. If a planner without `SUPER` should be
+    allowed to create, replace the predicate (and decide whether the series builder follows).
 
 ---
 
@@ -477,7 +489,7 @@ npm run dev        # http://localhost:3000 (proxies /api and /user_pics to dev.t
 npm run typecheck  # tsc --noEmit
 npm run build      # type-check + dist/
 npm run preview    # serve dist/
-npm run icons      # regenerate PWA icons + favicons from logo.png (sharp)
+npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
 ```
 
 ---
@@ -540,7 +552,7 @@ npm run icons      # regenerate PWA icons + favicons from logo.png (sharp)
 - **`.input` (in index.css) overrides Tailwind padding utilities** because it is defined
   after `@tailwind utilities`; a search field that needs room for an icon must set
   `padding-left` inline (the manage page does).
-- **`npm run icons` is no longer dependency-free** — it uses `sharp` and reads `logo.png`.
+- **`npm run icons` is no longer dependency-free** — it uses `sharp` and reads `logo2.png`.
 - **Vite's proxy has no `router` option** in 5.4 (it is silently ignored, so every request
   quietly hit the default host). Multi-team dev routing therefore overrides the `Host`
   header in `proxyReq`; verify with
