@@ -10,8 +10,8 @@ earlier pitfalls. Keep this file current when significant things change.
 ## 0. Where we left off (resume here)
 
 **Everything below is committed and pushed; the working tree is clean.**
-Latest commit: dark mode, English UI, text size, logo icons and the event-management
-polish (run `git log -1` for the hash).
+Latest commit: `7cd429a` — notifications (bell feed + Web Push client) and the push-state
+fix for browsers without a service worker (dev server).
 Remote: `github.com/kadlesim/tymy-pwa`, `master` in sync with `origin/master`.
 
 State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
@@ -44,13 +44,20 @@ Re-verified 2026-11-11 from outside: `/` and `/team` answer 200, `/api/eventType
 the Pages Function answers `401 Unauthorized` for `pd` (upstream reached, no session) and
 `404 Team not found` for an unknown subdomain. Redeploy with
 `npx wrangler pages deploy dist --project-name tymy-pwa` (or by pushing to `master` if the
-project is Git-connected).
+project is Git-connected). The notification build is live: `/sw.js` contains
+`importScripts("/push-sw.js")` and `/push-sw.js` is served as JavaScript (verified right
+after the 2026-11-11 deploy).
 
-**Next likely tasks** (see §7 for the full list): verify the remaining write
-endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`, `POST /user/{id}/avatar`,
-`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`) — the new
-`/events/manage` page calls `POST /events/create` (array) and `DELETE /event/{id}`, but
-neither has been run against a live team yet — then a real login on the live deployment.
+**Next likely tasks** (see §7 for the full list):
+1. **Test notifications live** with a second account: enable push in Profile → Nastavení →
+   Notifikace, then have the other user post in a discussion you can read or
+   create/reschedule/delete an event. The author is excluded by the server. iOS only works
+   in an installed PWA.
+2. Verify the remaining write endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`,
+   `POST /user/{id}/avatar`, `POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`)
+   — the manage page exercises create/delete but they have not been run against a live team.
+3. Server-side notification wishes (feed/read state, real badge, per-user prefs, poll/
+   attendance triggers, DELETE subscription) — `docs/NOTIFICATIONS_PLAN.md` §6.
 
 ---
 
@@ -534,6 +541,12 @@ smoke test confirmed:
   `dist/sw.js` contains `importScripts("/push-sw.js")` and `dist/push-sw.js` exists.
   **0 console errors.** Not exercised live: a real push delivery (needs a second account)
   and the iOS installed-PWA flow.
+- Follow-up: the first build said "Tento prohlížeč notifikace nepodporuje." in Firefox on
+  the Vite dev server — that branch also fired when no service worker was registered. Push
+  states are now `unsupported` / `insecure` / `no-sw` / `denied` / `off` / `subscribed`; dev
+  reports "not available in this environment". The deployed notification build was verified:
+  `/sw.js` contains `importScripts("/push-sw.js")` and `/push-sw.js` answers 200
+  `application/javascript`.
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.

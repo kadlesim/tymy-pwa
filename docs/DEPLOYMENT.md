@@ -67,9 +67,17 @@ confirmed against pd through `wrangler pages dev`, but **not yet by hand on the 
 - [ ] Chat opens on the newest message and loads older pages when scrolling up.
 - [ ] Reporty → XLSX downloads a file (binary passes through the proxy).
 - [ ] Reload with DevTools offline: the app shell still loads (service worker).
+- [ ] Notifications: Profile → Nastavení → Notifikace → "Zapnout notifikace" prompts for
+      permission and registers a subscription; a push from **another account** (new post,
+      event create/reschedule/delete) appears and clicking it opens the mapped route.
+      DevTools → Application → Service Workers must show the worker importing `push-sw.js`.
+      iOS only pushes to an installed PWA; Firefox private windows block service workers.
 
 ## Known production behaviour
 
+- Browser push is sent by the Tymy server itself (VAPID key is global, same on dev/pd); the
+  client only stores the subscription. Push history/read state does not exist server-side —
+  the bell derives unread items itself. The author of a post/event is never notified.
 - The API host has no `/captions` endpoint, and `/loginPhp` answers with a redirect; both
   are called only in production builds and fail silently (built-in Czech captions are used).
 - `/api/*` is **not** cached by the service worker (`NetworkOnly`) — a stale session or
