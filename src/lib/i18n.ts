@@ -375,6 +375,19 @@ const EN: Record<string, string> = {
   // Reports
   'Export se nezdařil.': 'The export failed.',
   'Stáhnout oficiální report jako XLSX': 'Download the official report as XLSX',
+  'Stáhnout oficiální report jako XLSX (rok {year})':
+    'Download the official report as XLSX ({year})',
+  'Plánovaná a skutečná účast ve vybraném období.':
+    'Planned and actual attendance in the selected range.',
+  'Žádná data pro vybrané období': 'No data for the selected range',
+  'Pro tento typ události nejsou žádná data.': 'There is no data for this event type.',
+  'V tomto období nejsou žádné události.': 'There are no events in this range.',
+  'Skupina': 'Group',
+  'Člen': 'Member',
+  'Číslo': 'Number',
+  'Anonymní anketa – jména hlasujících se nezobrazují.':
+    'Anonymous poll — voters’ names are hidden.',
+  '{events} událostí · {players} osob': '{events} events · {players} people',
   'Stahuji…': 'Downloading…',
   'Plánovaná a skutečná účast na událostech roku {year}.':
     'Planned and actual attendance at events in {year}.',
@@ -410,4 +423,10 @@ export function tr(cs: string, vars?: Vars): string {
   const source = lang() === 'en' ? (EN[cs] ?? cs) : cs
   if (!vars) return source
   return source.replace(/\{(\w+)\}/g, (_match, name: string) => String(vars[name] ?? ''))
+}
+
+/** Boolean labels (polls): kept out of the dictionary because Czech "Ne" also means Sunday. */
+export function trBool(value: boolean): string {
+  if (lang() === 'en') return value ? 'Yes' : 'No'
+  return value ? 'Ano' : 'Ne'
 }

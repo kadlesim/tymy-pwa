@@ -6,15 +6,20 @@ import { createEffect, createMemo, createSignal, For, Show } from 'solid-js'
 import { useQuery } from '@tanstack/solid-query'
 import {
   exportEventReport,
+  getEventTypes,
   getEventsWithMyAttendance,
   getUsersByStatus,
   type Event,
-  type User
+  type EventType,
+  type User,
+  type UserStatus
 } from '../../lib/api'
+import { queryKeys } from '../../lib/queryClient'
+import { USER_STATUSES, USER_STATUS_LABELS } from '../../lib/user-status'
 import { STATUS_COLORS } from '../events/constants'
-import { attendanceCaption } from '../../lib/event-labels'
+import { attendanceCaption, eventTypeCaption } from '../../lib/event-labels'
 import { formatDisplayDate } from '../../lib/date-filters'
-import { getLocale } from '../../lib/prefs'
+import { getLocale, lang } from '../../lib/prefs'
 import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
@@ -37,20 +42,16 @@ const statusColor = (code?: string | null): string =>
 const statusLabel = (code?: string | null): string =>
   code ? attendanceCaption(code) : '—'
 
-const yearsBack = 15
-
 export default function ReportsPage() {
-  const [year, setYear] = createSignal(new Date().getFullYear())
-  const [yearTouched, setYearTouched] = createSignal(false)
+  const [statusFilter, setStatusFilter] = createSignal<UserStatus>('PLAYER')
+  const [typeFilter, setTypeFilter] = createSignal('all')
+  const [from, setFrom] = createSignal('')
+  const [to, setTo] = createSignal('')
+  const [rangeTouched, setRangeTouched] = createSignal(false)
   const [downloading, setDownloading] = createSignal(false)
   const [downloadError, setDownloadError] = createSignal<string | null>(null)
 
-  const yearOptions = createMemo(() => {
-    const now = new Date().getFullYear()
-    return Array.from({ length: yearsBack + 1 }, (_, i) => now - i)
-  })
-
-  // Start on the newest year that actually has events (the dev dataset ends in 2022).
+  // Start on the year of the newest event (the dev dataset ends in 2022).
   const latestQuery = useQuery<Event[], Error>(() => ({
     queryKey: ['events', 'latest'],
     queryFn: () => getEventsWithMyAttendance({ order: 'startTime__desc', limit: 1 }),
@@ -59,29 +60,45 @@ export default function ReportsPage() {
 
   createEffect(() => {
     const newest = latestQuery.data?.[0]
-    if (!newest || yearTouched()) return
+    if (!newest || rangeTouched()) return
     const newestYear = new Date(newest.startTime).getFullYear()
-    if (Number.isFinite(newestYear)) setYear(newestYear)
+    if (Number.isFinite(newestYear)) {
+      setFrom(`${newestYear}-01-01`)
+      setTo(`${newestYear}-12-31`)
+    }
   })
 
   const eventsQuery = useQuery<Event[], Error>(() => ({
-    queryKey: ['reports', 'events', year()],
+    queryKey: ['reports', 'events', from(), to()],
     queryFn: () =>
       getEventsWithMyAttendance({
         filters: [
-          { field: 'startTime', operator: '>=', value: new Date(Date.UTC(year(), 0, 1)) },
-          { field: 'startTime', operator: '<=', value: new Date(Date.UTC(year(), 11, 31, 23, 59, 59)) }
+          { field: 'startTime', operator: '>=', value: new Date(`${from()}T00:00:00`) },
+          { field: 'startTime', operator: '<=', value: new Date(`${to()}T23:59:59`) }
         ],
         order: 'startTime'
       }),
+    enabled: !!from() && !!to(),
     staleTime: 1000 * 60 * 10
   }))
 
   const playersQuery = useQuery<User[], Error>(() => ({
-    queryKey: ['reports', 'players'],
-    queryFn: () => getUsersByStatus('PLAYER'),
+    queryKey: ['reports', 'players', statusFilter()],
+    queryFn: () => getUsersByStatus(statusFilter()),
     staleTime: 1000 * 60 * 30
   }))
+
+  const eventTypesQuery = useQuery<EventType[], Error>(() => ({
+    queryKey: queryKeys.eventTypes(lang()),
+    queryFn: getEventTypes,
+    staleTime: 1000 * 60 * 60
+  }))
+
+  /** The XLSX export is server-side and year-based; use the year of the range start. */
+  const exportYear = () => {
+    const value = Number(from().slice(0, 4))
+    return Number.isFinite(value) && value > 0 ? value : new Date().getFullYear()
+  }
 
   const events = createMemo(() => eventsQuery.data ?? [])
 
@@ -116,18 +133,23 @@ export default function ReportsPage() {
     (event.attendance ?? []).find(record => record.userId === userId)
 
   const usedEvents = createMemo(() =>
-    events().filter(event => (event.attendance ?? []).some(a => a.preStatus || a.postStatus))
+    events().filter(
+      event =>
+        (typeFilter() === 'all' || event.type === typeFilter()) &&
+        (event.attendance ?? []).some(a => a.preStatus || a.postStatus)
+    )
   )
 
   const handleDownload = async () => {
     setDownloadError(null)
     setDownloading(true)
     try {
-      const blob = await exportEventReport(year())
+      const year = exportYear()
+      const blob = await exportEventReport(year)
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `report-event-${year()}.xlsx`
+      link.download = `report-event-${year}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -145,30 +167,77 @@ export default function ReportsPage() {
     <div class="reports-page">
       <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 class="text-xl font-semibold text-text">{tr('Reporty')}</h1>
-        <div class="flex items-center gap-2">
-          <label class="label mb-0" for="report-year">
-            {tr('Rok')}
-          </label>
-          <select
-            id="report-year"
-            class="input w-auto"
-            value={String(year())}
+        <button
+          class="btn btn-secondary"
+          onClick={handleDownload}
+          disabled={downloading()}
+          title={tr('Stáhnout oficiální report jako XLSX (rok {year})', { year: exportYear() })}
+        >
+          <span class="icon-sm" innerHTML={ICONS['download']} />
+          {downloading() ? tr('Stahuji…') : `XLSX ${exportYear()}`}
+        </button>
+      </div>
+
+      {/* Filters: date range, event type and the user category (default: players). */}
+      <div class="flex flex-wrap items-end gap-3 mb-3">
+        <div>
+          <label class="label mb-1" for="report-from">{tr('Od')}</label>
+          <input
+            id="report-from"
+            type="date"
+            class="input py-2 px-3 text-sm"
+            style="width: auto"
+            value={from()}
             onChange={e => {
-              setYearTouched(true)
-              setYear(Number(e.currentTarget.value))
+              setRangeTouched(true)
+              setFrom(e.currentTarget.value)
             }}
+          />
+        </div>
+        <div>
+          <label class="label mb-1" for="report-to">{tr('Do')}</label>
+          <input
+            id="report-to"
+            type="date"
+            class="input py-2 px-3 text-sm"
+            style="width: auto"
+            value={to()}
+            onChange={e => {
+              setRangeTouched(true)
+              setTo(e.currentTarget.value)
+            }}
+          />
+        </div>
+        <div>
+          <label class="label mb-1" for="report-type">{tr('Typ události')}</label>
+          <select
+            id="report-type"
+            class="input py-2 px-3 text-sm"
+            style="width: auto"
+            value={typeFilter()}
+            onChange={e => setTypeFilter(e.currentTarget.value)}
           >
-            <For each={yearOptions()}>{option => <option value={String(option)}>{option}</option>}</For>
+            <option value="all">{tr('Všechny typy')}</option>
+            <For each={eventTypesQuery.data ?? []}>
+              {(type) => (
+                <option value={type.code}>{eventTypeCaption(type.code, type.caption)}</option>
+              )}
+            </For>
           </select>
-          <button
-            class="btn btn-secondary"
-            onClick={handleDownload}
-            disabled={downloading()}
-            title={tr('Stáhnout oficiální report jako XLSX')}
+        </div>
+        <div>
+          <label class="label mb-1" for="report-group">{tr('Skupina')}</label>
+          <select
+            id="report-group"
+            class="input py-2 px-3 text-sm"
+            style="width: auto"
+            value={statusFilter()}
+            onChange={e => setStatusFilter(e.currentTarget.value as UserStatus)}
           >
-            <span class="icon-sm" innerHTML={ICONS['download']} />
-            {downloading() ? tr('Stahuji…') : 'XLSX'}
-          </button>
+            <For each={USER_STATUSES}>
+              {(status) => <option value={status}>{tr(USER_STATUS_LABELS[status])}</option>}
+            </For>
+          </select>
         </div>
       </div>
 
@@ -177,7 +246,7 @@ export default function ReportsPage() {
       </Show>
 
       <p class="text-sm text-muted mb-3">
-        {tr('Plánovaná a skutečná účast na událostech roku {year}.', { year: year() })}
+        {tr('Plánovaná a skutečná účast ve vybraném období.')}
         <span class="ml-1">{tr('✓ přijdu · ✕ nepřijdu · ~ později · ? nevím')}</span>
       </p>
 
@@ -195,12 +264,14 @@ export default function ReportsPage() {
             <div class="text-center py-12">
               <span class="icon icon-lg text-muted mb-3" innerHTML={ICONS['reports']} />
               <h3 class="text-lg font-medium text-text mb-1">
-                {tr('Žádná data pro rok {year}', { year: year() })}
+                {tr('Žádná data pro vybrané období')}
               </h3>
               <p class="text-muted">
-                {events().length === 0
-                  ? tr('V tomto roce nejsou žádné události.')
-                  : tr('V týmu nejsou žádní aktivní hráči.')}
+                {usedEvents().length === 0 && events().length > 0
+                  ? tr('Pro tento typ události nejsou žádná data.')
+                  : events().length === 0
+                    ? tr('V tomto období nejsou žádné události.')
+                    : tr('V této skupině nejsou žádní členové.')}
               </p>
             </div>
           }
@@ -211,7 +282,7 @@ export default function ReportsPage() {
                 <thead>
                   <tr class="bg-50">
                     <th class="sticky left-0 z-10 bg-50 text-left px-3 py-2 font-medium text-text whitespace-nowrap border-b border-border">
-                      {tr('Hráč')}
+                      {tr('Člen')}
                     </th>
                     <For each={usedEvents()}>
                       {event => (
@@ -272,7 +343,7 @@ export default function ReportsPage() {
               </table>
             </div>
             <p class="px-3 py-2 text-xs text-muted border-t border-border-light">
-              {tr('{events} událostí · {players} hráčů', {
+              {tr('{events} událostí · {players} osob', {
                 events: usedEvents().length,
                 players: players().length
               })}

@@ -1,12 +1,22 @@
 // Poll detail page with voting
 
-import { createSignal, For, Show } from 'solid-js'
+import { createSignal, createMemo, For, Show } from 'solid-js'
 import { useParams, useNavigate } from '@solidjs/router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
-import { getPoll, submitPollVotes, type Poll, type PollOption } from '../../lib/api'
+import {
+  getPoll,
+  getUsersByStatus,
+  submitPollVotes,
+  apiAssetUrl,
+  type Poll,
+  type PollOption,
+  type PollVote,
+  type User
+} from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
+import { USER_STATUSES } from '../../lib/user-status'
 import { useCommonCaptions } from '../../lib/captions'
-import { tr } from '../../lib/i18n'
+import { tr, trBool } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 type VoteValue = string | number | boolean
@@ -19,12 +29,50 @@ export default function PollDetailPage() {
 
   const pollId = () => parseInt(params['id'] ?? '0', 10)
   const [selected, setSelected] = createSignal<Record<number, VoteValue>>({})
+  // Avatar URLs that 404 (deleted uploads) fall back to the generic user glyph.
+  const [brokenAvatars, setBrokenAvatars] = createSignal<Set<number>>(new Set())
 
   const pollQuery = useQuery<Poll, Error>(() => ({
     queryKey: queryKeys.poll(pollId()),
     queryFn: () => getPoll(pollId()),
     enabled: pollId() > 0
   }))
+
+  // Votes only carry userIds, so the names/avatars come from the roster (all categories).
+  const usersQuery = useQuery<User[], Error>(() => ({
+    queryKey: ['users', 'poll-voters'],
+    queryFn: async () => {
+      const lists = await Promise.all(USER_STATUSES.map(status => getUsersByStatus(status)))
+      return lists.flat()
+    },
+    staleTime: 1000 * 60 * 10
+  }))
+
+  const usersById = createMemo(() => {
+    const map = new Map<number, User>()
+    for (const user of usersQuery.data ?? []) map.set(user.id, user)
+    return map
+  })
+
+  const userName = (userId: number): string => {
+    const user = usersById().get(userId)
+    return (
+      user?.displayName ||
+      user?.callName ||
+      user?.login ||
+      tr('Uživatel {id}', { id: userId })
+    )
+  }
+
+  const votesFor = (poll: Poll, optionId: number): PollVote[] =>
+    (poll.votes ?? []).filter(vote => vote.optionId === optionId)
+
+  const voteValue = (vote: PollVote): string => {
+    if (vote.stringValue) return vote.stringValue
+    if (vote.numericValue !== null && vote.numericValue !== undefined) return String(vote.numericValue)
+    if (vote.booleanValue !== null && vote.booleanValue !== undefined) return trBool(vote.booleanValue)
+    return ''
+  }
 
   const voteMutation = useMutation<void, Error, void>(() => ({
     mutationFn: async () => {
@@ -157,6 +205,49 @@ export default function PollDetailPage() {
                                 style={`width: ${totalVotes() ? (voteCountFor(poll(), option) / totalVotes()) * 100 : 0}%`}
                               />
                             </div>
+
+                            {/* Who voted for this option (anonymous polls hide the names). */}
+                            <Show when={!poll().anonymousResults && votesFor(poll(), option.id).length > 0}>
+                              <div class="flex flex-wrap gap-1.5 mt-2">
+                                <For each={votesFor(poll(), option.id)}>
+                                  {(vote) => {
+                                    const voter = () => usersById().get(vote.userId)
+                                    return (
+                                      <span class="inline-flex items-center gap-1.5 bg-50 border border-border-light rounded-full pl-0.5 pr-2 py-0.5 max-w-full">
+                                        <Show
+                                          when={
+                                            voter()?.pictureUrl && !brokenAvatars().has(vote.userId)
+                                              ? voter()!.pictureUrl
+                                              : undefined
+                                          }
+                                          fallback={
+                                            <span class="w-5 h-5 rounded-full bg-secondary-light flex items-center justify-center text-muted flex-shrink-0">
+                                              <span class="icon-sm" innerHTML={ICONS['user']} />
+                                            </span>
+                                          }
+                                        >
+                                          {(pictureUrl) => (
+                                            <img
+                                              src={apiAssetUrl(pictureUrl())}
+                                              alt=""
+                                              loading="lazy"
+                                              class="w-5 h-5 rounded-full object-cover flex-shrink-0"
+                                              onError={() =>
+                                                setBrokenAvatars(prev => new Set(prev).add(vote.userId))
+                                              }
+                                            />
+                                          )}
+                                        </Show>
+                                        <span class="text-xs text-text truncate">{userName(vote.userId)}</span>
+                                        <Show when={voteValue(vote)}>
+                                          <span class="text-xs text-muted truncate">· {voteValue(vote)}</span>
+                                        </Show>
+                                      </span>
+                                    )
+                                  }}
+                                </For>
+                              </div>
+                            </Show>
                           </div>
                         </Show>
                       </div>
@@ -164,6 +255,12 @@ export default function PollDetailPage() {
                   )}
                 </For>
               </div>
+
+              <Show when={showResults() && poll().anonymousResults}>
+                <p class="text-xs text-muted mb-4">
+                  {tr('Anonymní anketa – jména hlasujících se nezobrazují.')}
+                </p>
+              </Show>
 
               <Show when={canVote()}>
                 <button

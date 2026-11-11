@@ -175,6 +175,7 @@ src/
 │   ├── bbcode.ts       safe BBCode ↔ HTML
 │   ├── date-filters.ts API date formatting + display helpers
 │   ├── event-labels.ts localised event-type / attendance captions (EN fallback map)
+│   ├── user-status.ts  user categories shared by the roster and reports
 │   ├── icons.ts        MDI Light inline SVG set (shared by layout and features)
 │   ├── queryClient.ts  QueryClient, persistence, query keys, invalidators
 │   ├── pwa.ts          SW update listeners, install prompt, push helpers
@@ -330,9 +331,20 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **Sections**: Události, Chat, Ankety, Tým, Soubory, Reporty, Profil. Only the five
   with `primary: true` are shown in the mobile bottom bar; the other two live in the
   drawer (7 items would not fit at 390 px).
-- **Reporty** = the legacy "Report docházky": players × events matrix from
-  `events/withMyAttendance` (fetched per year) + `users/status/PLAYER`, plus the official
-  XLSX via `GET /event/export/report?year=…&page=…` (binary, **not** a JSON envelope).
+- **Reporty** = the legacy "Report docházky": a players × events matrix from
+  `events/withMyAttendance` + `users/status/{category}`, with three filters — **date range**
+  (defaults to Jan 1 – Dec 31 of the newest event's year), **event type** (client-side on
+  the matrix columns) and **user category** (same list as Tým, default PLAYER). The
+  official XLSX still comes from `GET /event/export/report?year=…&page=…` (binary, **not**
+  a JSON envelope): it is server-side and year-based, so the button exports the year of
+  the range start and shows it (`XLSX 2026`).
+- **Tým** = a table (avatar, display name, jersey number, phone, e-mail) instead of cards;
+  phone hides below `md`, e-mail below `sm`, and the hidden values reappear as a second
+  line under the name on phones. Broken/missing avatars fall back to the user glyph.
+- **Ankety**: the list keeps the compact summary. The detail shows the per-option bars
+  **and who voted for each option** (avatar + name + the value for TEXT/NUMBER/BOOLEAN
+  options). Votes carry only `userId`, so names come from the roster via one query that
+  merges all five `users/status/*` categories. `anonymousResults` hides the names.
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -445,6 +457,16 @@ smoke test confirmed:
 - Discussion creation is admin-only now: with `roles: []` the "New discussion" button is
   absent; the event "Nová událost" buttons are back for everyone.
 
+### 2026-11-11 — roster table, report filters, poll voters (mock-verified)
+
+- Headless Edge, mocked API in English: `/users` renders the table with Member / Number /
+  Phone / E-mail columns (phone hidden below `md`, e-mail below `sm`) and a generic glyph
+  when an avatar 404s; `/reports` shows From / Until / Event type / Group and a matrix of
+  the filtered events (3 events × 4 people); `/polls/1` shows the bars plus voter chips
+  ("Šimon Test · Yes", "Petr Dlouhý · No", "Šimon Test · 4"). **0 console errors**.
+- Reminder from the check: the poll detail endpoint is `/polls/{id}` (plural). A stub for
+  `/poll/1` silently produced "Poll not found".
+
 ---
 
 ## 7. Open items / next steps (priority order)
@@ -495,6 +517,12 @@ smoke test confirmed:
 15. **Discussion creation is gated by `isAdmin()`** (`SUPER` role), not by the real
     `SYS:DIS_CREATE` right — the API exposes no flag. Replace the predicate if one appears
     (or if planners should be allowed too).
+16. **Reports export is year-based** while the matrix filter is a free date range: the
+    XLSX button exports the range's start year (shown on the button). Switch to a range
+    export if the server ever offers one.
+17. **Poll voter names cost five `users/status/*` requests** — the API has no all-users
+    GET. Cached for 10 minutes under `['users','poll-voters']`; collapse to one request if
+    an endpoint appears.
 
 ---
 
@@ -577,6 +605,9 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
 - **`Accept-Language` is sent on every API request** based on the UI language. Event type
   captions are usually still Czech, so `event-labels.ts` fills in English for the standard
   codes; the `eventTypes` query key includes the language to refetch if the server localises.
+- **Poll detail is `/polls/{id}`** (plural). `/poll/{id}` answers empty and the page
+  silently shows "Poll not found". Votes embed only `userId`; anonymity is
+  `poll.anonymousResults`, so never render voter names without checking it.
 - **Vite's proxy has no `router` option** in 5.4 (it is silently ignored, so every request
   quietly hit the default host). Multi-team dev routing therefore overrides the `Host`
   header in `proxyReq`; verify with

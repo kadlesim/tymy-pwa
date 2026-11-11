@@ -6,19 +6,10 @@ import { useQuery } from '@tanstack/solid-query'
 import { getUsersByStatus, type User, type UserStatus } from '../../lib/api'
 import { apiAssetUrl } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
+import { USER_STATUSES, USER_STATUS_LABELS } from '../../lib/user-status'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
-
-const STATUSES: UserStatus[] = ['PLAYER', 'MEMBER', 'SICK', 'INIT', 'DELETED']
-
-const STATUS_LABEL: Record<UserStatus, string> = {
-  PLAYER: 'Hráči',
-  MEMBER: 'Členové',
-  SICK: 'Nemocní',
-  INIT: 'Neaktivní',
-  DELETED: 'Smazaní'
-}
 
 export default function UsersPage() {
   const navigate = useNavigate()
@@ -26,6 +17,8 @@ export default function UsersPage() {
 
   const [status, setStatus] = createSignal<UserStatus>('PLAYER')
   const [search, setSearch] = createSignal('')
+  // Avatar URLs that 404 (no picture / deleted upload) fall back to the user glyph.
+  const [brokenAvatars, setBrokenAvatars] = createSignal<Set<number>>(new Set())
 
   const usersQuery = useQuery<User[], Error>(() => ({
     queryKey: queryKeys.users(status()),
@@ -61,7 +54,7 @@ export default function UsersPage() {
       </div>
 
       <div class="flex gap-1 bg-100 rounded-lg p-1 mb-4 overflow-x-auto" role="tablist">
-        <For each={STATUSES}>
+        <For each={USER_STATUSES}>
           {(s) => (
             <button
               role="tab"
@@ -73,7 +66,7 @@ export default function UsersPage() {
               }}
               onClick={() => setStatus(s)}
             >
-              {tr(STATUS_LABEL[s])}
+              {tr(USER_STATUS_LABELS[s])}
             </button>
           )}
         </For>
@@ -90,41 +83,79 @@ export default function UsersPage() {
             </div>
           }
         >
-          <div class="space-y-2">
-            <For each={filtered()}>
-              {(user) => (
-                <article
-                  class="bg-elevated rounded-xl border border-border p-3 hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/users/${user.id}`)}
-                >
-                  <div class="flex items-center gap-3">
-                    <img
-                      src={apiAssetUrl(user.pictureUrl)}
-                      alt=""
-                      class="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
-                    />
-                    <div class="flex-1 min-w-0">
-                      <div class="flex items-center gap-2">
-                        <span class="font-medium text-text truncate">
-                          {user.callName || user.displayName}
-                        </span>
-                        <Show when={user.jerseyNumber}>
-                          <span class="badge bg-primary-light text-primary text-xs">#{user.jerseyNumber}</span>
-                        </Show>
-                      </div>
-                      <div class="flex items-center gap-2 text-xs text-muted mt-0.5">
-                        <Show when={user.firstName || user.lastName}>
-                          <span>{user.firstName} {user.lastName}</span>
-                        </Show>
-                        <Show when={user.email}>
-                          <span class="truncate max-w-[200px]">{user.email}</span>
-                        </Show>
-                      </div>
-                    </div>
-                  </div>
-                </article>
-              )}
-            </For>
+          <div class="bg-elevated rounded-xl border border-border overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm border-collapse">
+                <thead>
+                  <tr class="bg-50 border-b border-border text-[11px] uppercase tracking-wide text-muted">
+                    <th class="text-left font-medium px-3 py-2">{tr('Člen')}</th>
+                    <th class="text-left font-medium px-3 py-2 w-16 whitespace-nowrap">{tr('Číslo')}</th>
+                    <th class="text-left font-medium px-3 py-2 whitespace-nowrap hidden md:table-cell">
+                      {tr('Telefon')}
+                    </th>
+                    <th class="text-left font-medium px-3 py-2 whitespace-nowrap hidden sm:table-cell">
+                      {tr('E-mail')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <For each={filtered()}>
+                    {(user) => (
+                      <tr
+                        class="border-b border-border-light last:border-b-0 hover:bg-50 cursor-pointer"
+                        onClick={() => navigate(`/users/${user.id}`)}
+                      >
+                        <td class="px-3 py-2">
+                          <div class="flex items-center gap-3">
+                            <Show
+                              when={
+                                user.pictureUrl && !brokenAvatars().has(user.id)
+                                  ? user.pictureUrl
+                                  : undefined
+                              }
+                              fallback={
+                                <span class="w-9 h-9 rounded-full bg-secondary-light flex items-center justify-center text-muted flex-shrink-0">
+                                  <span class="icon-sm" innerHTML={ICONS['user']} />
+                                </span>
+                              }
+                            >
+                              {(pictureUrl) => (
+                                <img
+                                  src={apiAssetUrl(pictureUrl())}
+                                  alt=""
+                                  loading="lazy"
+                                  class="w-9 h-9 rounded-full object-cover border border-border flex-shrink-0"
+                                  onError={() =>
+                                    setBrokenAvatars(prev => new Set(prev).add(user.id))
+                                  }
+                                />
+                              )}
+                            </Show>
+                            <div class="min-w-0">
+                              <p class="font-medium text-text truncate">
+                                {user.callName || user.displayName}
+                              </p>
+                              <p class="text-xs text-muted truncate sm:hidden">
+                                {user.phone || user.email || ''}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td class="px-3 py-2 text-text whitespace-nowrap">
+                          {user.jerseyNumber ? `#${user.jerseyNumber}` : '—'}
+                        </td>
+                        <td class="px-3 py-2 text-muted whitespace-nowrap hidden md:table-cell">
+                          {user.phone || '—'}
+                        </td>
+                        <td class="px-3 py-2 text-muted hidden sm:table-cell">
+                          <span class="block truncate max-w-[260px]">{user.email || '—'}</span>
+                        </td>
+                      </tr>
+                    )}
+                  </For>
+                </tbody>
+              </table>
+            </div>
           </div>
         </Show>
       </Show>
