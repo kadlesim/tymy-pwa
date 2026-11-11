@@ -23,8 +23,7 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
   builder, §5).
 - **Chat**: bottom composer, newest at the bottom, older pages on scroll-up, per-message
   hover menu (react/copy/edit/pin/delete) with server-mirroring rights. "Nová diskuze" is
-  shown only when the user can write in some discussion (§5 — the API exposes no
-  `canCreate` flag).
+  shown only for admins (`isAdmin()`) — the API exposes no `canCreate` flag (§5).
 - **Chat view is intentionally borderless**; **UI is neutral grey**, tight radii, MDI Light
   icons only (no emoji) (§2).
 - **Preferences**: dark mode, Czech/English UI and a larger text size — icons next to the
@@ -530,7 +529,12 @@ smoke test confirmed:
    Playwright/Vitest browser for login → events → RSVP.
 8. **App icons** are generated from `logo2.png` (`npm run icons`, sharp); the procedural
    placeholders and `favicon.svg` are gone.
-9. **Push notifications** need a backend VAPID key + subscription endpoint.
+9. **Notifications — planned, not implemented.** Full plan in
+   **`docs/NOTIFICATIONS_PLAN.md`**: Phase 1 is a client-derived in-app notification centre
+   (bell badge + menu, no backend); Phase 2 is a server feed + Web Push and needs API work
+   (notifications table/endpoints, subscription storage, VAPID sender). The bell is still
+   decorative and the Profile toggles are placeholders. Open questions to confirm in the
+   dev.tymy.cz discussion are listed in the plan.
 10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
     Cloudflare Pages + the two Pages Functions, `TYMY_DEFAULT_TEAM=pd`. Remaining follow-ups:
     log in there once for real (writes were only tested against dev/pd locally), add a
