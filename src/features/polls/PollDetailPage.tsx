@@ -5,6 +5,7 @@ import { useParams, useNavigate } from '@solidjs/router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import {
   getPoll,
+  getUser,
   getUsersByStatus,
   submitPollVotes,
   apiAssetUrl,
@@ -48,9 +49,43 @@ export default function PollDetailPage() {
     staleTime: 1000 * 60 * 10
   }))
 
-  const usersById = createMemo(() => {
+  const baseUsersById = createMemo(() => {
     const map = new Map<number, User>()
     for (const user of usersQuery.data ?? []) map.set(user.id, user)
+    return map
+  })
+
+  const voterIds = createMemo(() => {
+    const poll = pollQuery.data
+    if (!poll) return []
+    const ids = new Set<number>()
+    for (const vote of poll.votes ?? []) ids.add(vote.userId)
+    const base = baseUsersById()
+    const label = (id: number) => {
+      const user = base.get(id)
+      return user?.displayName || user?.callName || user?.login || ''
+    }
+    return [...ids].sort((a, b) => label(a).localeCompare(label(b), getLocale()))
+  })
+
+  // Voters can be missing from the roster (left the team, alien votes) — ask for those
+  // individual users so the table never falls back to "Uživatel 106".
+  const missingVoterIds = createMemo(() =>
+    voterIds().filter(id => !baseUsersById().has(id))
+  )
+
+  const extraUsersQuery = useQuery<(User | null)[], Error>(() => ({
+    queryKey: ['users', 'poll-voters', 'extra', missingVoterIds().join(',')],
+    queryFn: () => Promise.all(missingVoterIds().map(id => getUser(id).catch(() => null))),
+    enabled: missingVoterIds().length > 0,
+    staleTime: 1000 * 60 * 10
+  }))
+
+  const usersById = createMemo(() => {
+    const map = new Map(baseUsersById())
+    for (const user of extraUsersQuery.data ?? []) {
+      if (user) map.set(user.id, user)
+    }
     return map
   })
 
@@ -79,14 +114,6 @@ export default function PollDetailPage() {
       .map(option => voteOf(poll, userId, option.id)?.stringValue)
       .filter((value): value is string => !!value)
       .join(' · ')
-
-  const voterIds = createMemo(() => {
-    const poll = pollQuery.data
-    if (!poll) return []
-    const ids = new Set<number>()
-    for (const vote of poll.votes ?? []) ids.add(vote.userId)
-    return [...ids].sort((a, b) => userName(a).localeCompare(userName(b), getLocale()))
-  })
 
   const voteMutation = useMutation<void, Error, void>(() => ({
     mutationFn: async () => {

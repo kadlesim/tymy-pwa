@@ -352,7 +352,8 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   per-vote note field, so free-text (TEXT) options are rendered in that column instead of
   getting their own. Columns carry the vote count. `anonymousResults` keeps the aggregate
   bars and hides the names. Names come from the roster via one query that merges all five
-  `users/status/*` categories.
+  `users/status/*` categories; voters missing from it (left the team, alien vote) are
+  fetched individually with `GET /user/{id}`, so the table never shows "Uživatel 106".
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -478,6 +479,8 @@ smoke test confirmed:
   link glyph immediately after the description (`DOM` order checked), and opening "Change
   history" places the history above the first attendance group. The poll results render as
   a table (Member / option columns with vote counts / Note). **0 console errors**.
+- A poll vote by an id absent from every roster category rendered as "Alien Voter" (its
+  `/user/{id}` response) instead of "User 106"; the event-card glyph is 28 px.
 
 ---
 
@@ -576,8 +579,8 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   **no `send` glyph** (a round `arrow-up` button is used) and **no `mdilLoading`** even
   though it exists at runtime — the spinner is a spinning `refresh`.
 - **Icon sizing**: `.icon` = 20 px, `.icon-sm` = 16 px, `.icon-md` = 24 px,
-  `.icon-lg` = 40 px. Text utilities like `text-4xl` do **not** resize glyphs (the svg
-  has a fixed size).
+  `.icon-28` = 28 px (event-card glyph), `.icon-lg` = 40 px. Text utilities like `text-4xl`
+  do **not** resize glyphs (the svg has a fixed size).
 - **Radius/colour utilities live in `index.css`, not in Tailwind's theme.** The custom
   block after `@tailwind utilities` redefines `.rounded-md/.rounded-lg/.rounded-xl/.rounded-2xl`,
   so the values in `tailwind.config.cjs` are ignored — change the `--radius-*` vars (and

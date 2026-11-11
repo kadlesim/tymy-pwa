@@ -446,7 +446,7 @@ function EventCard(props: EventCardProps) {
             class="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
             style={`background-color: var(--color-${color()}-light)`}
           >
-            <span class="icon" style={`color: var(--color-${color()})`} innerHTML={ICONS[TYPE_ICON[props.event.type] || 'calendar']} />
+            <span class="icon-28" style={`color: var(--color-${color()})`} innerHTML={ICONS[TYPE_ICON[props.event.type] || 'calendar']} />
           </div>
 
           <div class="flex-1 min-w-0">
