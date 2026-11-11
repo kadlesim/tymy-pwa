@@ -1,5 +1,8 @@
 # Deployment
 
+**Live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`,
+deployed 2026-11-11.
+
 The app is a **static SPA** (`dist/`) that must talk to the Tymy API **same-origin**,
 because the API sends no CORS headers. That is why a deploy needs two extra pieces, both
 already in this repo:
@@ -18,7 +21,8 @@ two handlers port to Netlify/Vercel with minor changes if you prefer those.
 
 ## A. Git-connected project (recommended)
 
-1. Push the repo to GitHub (it currently has no remote: `git remote add origin …`, `git push -u origin master`).
+1. Push the repo to GitHub (done — `origin` is `github.com/kadlesim/tymy-pwa`, `master`
+   in sync).
 2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**.
 3. Build settings:
    - Framework preset: *None*
@@ -49,6 +53,12 @@ team field prefilled. Cross-team API calls are impossible anyway (cookies + no C
 
 ## After the first deploy — checklist
 
+Verified from outside on 2026-11-11: `/` and `/team` answer 200 (SPA fallback serves
+`index.html`), `/api/eventTypes` with `X-Team-Subdomain: pd` answers `401 Unauthorized`
+(the function reached the team's API without a session) and an unknown subdomain answers
+`404 Team not found` (the upstream 302 is turned into a plain error). The items below were
+confirmed against pd through `wrangler pages dev`, but **not yet by hand on the live host**:
+
 - [ ] `/` redirects to `/team`, prefilled with the team; wrong subdomain shows
       "Tým … nebyl nalezen."
 - [ ] Login works and survives a reload (session in `localStorage` + `X-Session-Key`).
@@ -71,7 +81,9 @@ team field prefilled. Cross-team API calls are impossible anyway (cookies + no C
   follow-up is to request fewer events per tab or deny-list the embedded attendance.
 - After deploying a new build the old service worker may serve the previous bundle once;
   a hard reload clears it.
-- The Pages domain is `*.pages.dev`; add a custom domain later if the team wants one.
+- The Pages domain is `*.pages.dev` (this deployment: `tymy-pwa.pages.dev`); add a custom
+  team domain later if wanted. It must stay same-origin with the API, i.e. proxied through
+  the Pages Functions rather than pointed straight at the upstream host.
 
 ## Local rehearsal (what was verified)
 

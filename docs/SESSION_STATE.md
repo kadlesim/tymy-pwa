@@ -1,6 +1,6 @@
 # Project state — Tymy PWA
 
-_Last updated: 2026-11-10_
+_Last updated: 2026-11-11_
 
 Handoff notes so work can resume without re-discovering the backend or the
 earlier pitfalls. Keep this file current when significant things change.
@@ -9,8 +9,9 @@ earlier pitfalls. Keep this file current when significant things change.
 
 ## 0. Where we left off (resume here)
 
-**Everything below is committed; the working tree is clean.**
-Latest commit: `5beec47` — event detail RSVP note + grouped attendance.
+**Everything below is committed and pushed; the working tree is clean.**
+Latest commit: `05992d2` — Cloudflare Pages functions for `/api` and `/user_pics`.
+Remote: `github.com/kadlesim/tymy-pwa`, `master` in sync with `origin/master`.
 
 State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 
@@ -25,16 +26,19 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 - **Team selection** before login (`/team`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
 
-**Deployment is prepared but not published.** `functions/` (Pages Functions for `/api` and
-`/user_pics`), `public/_redirects` (SPA fallback) and `wrangler.toml` are in the repo, and
-the production build was rehearsed through `wrangler pages dev` against pd — see
-**`docs/DEPLOYMENT.md`**. What's left is on your side: push the repo to GitHub and create
-the Cloudflare Pages project (build `npm run build`, output `dist`, env
-`TYMY_DEFAULT_TEAM=pd`).
+**Deployment is live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`.
+`functions/` (Pages Functions for `/api` and `/user_pics`), `public/_redirects` (SPA
+fallback) and `wrangler.toml` are in the repo; see **`docs/DEPLOYMENT.md`**.
+Re-verified 2026-11-11 from outside: `/` and `/team` answer 200, `/api/eventTypes` through
+the Pages Function answers `401 Unauthorized` for `pd` (upstream reached, no session) and
+`404 Team not found` for an unknown subdomain. Redeploy with
+`npx wrangler pages deploy dist --project-name tymy-pwa` (or by pushing to `master` if the
+project is Git-connected).
 
-**Next likely tasks** (see §7 for the full list): deploy, then verify the remaining write
+**Next likely tasks** (see §7 for the full list): verify the remaining write
 endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`, `POST /user/{id}/avatar`,
-`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`).
+`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`), then a real login on the
+live deployment (writes have only been exercised against dev/pd locally).
 
 ---
 
@@ -337,6 +341,17 @@ smoke test confirmed:
 - All `⏳` / `✓` glyphs replaced with MDI icons (splash, page loaders, button spinners,
   success screens).
 
+### 2026-11-11 — production deployment
+
+- Live at **<https://tymy-pwa.pages.dev>** (Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`).
+- Probed from outside: `/` → 200, `/team` → 200 (SPA fallback serves `index.html`),
+  `/api/eventTypes` with `X-Team-Subdomain: pd` → `401 {"status":"ERROR","statusMessage":
+  "Unauthorized"}` (the function reached the team's API and forwarded no session), same
+  request with `nope12345` → `404 {"statusMessage":"Team not found"}` (upstream 302
+  detected). Proxy, team resolution and fallback all confirmed in production.
+- Not yet exercised on the live host: login and any write (only the read-only probes above
+  were run from here).
+
 ---
 
 ## 7. Open items / next steps (priority order)
@@ -366,10 +381,11 @@ smoke test confirmed:
 8. **App icons** are procedural placeholders (`npm run icons`) — replace with real
    artwork. (The in-app UI icons are already Material Design Light, see §2.)
 9. **Push notifications** need a backend VAPID key + subscription endpoint.
-10. **Production hosting** — see §0. The app must be served **same-origin with the API**
-    (no CORS), over HTTPS, with SPA fallback and a proxy that turns `X-Session-Key` into
-    `Cookie: PHPSESSID=…`. Nothing is deployed yet; Cloudflare Pages + one Pages Function
-    is the recommended first step.
+10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
+    Cloudflare Pages + the two Pages Functions, `TYMY_DEFAULT_TEAM=pd`. Remaining follow-ups:
+    log in there once for real (writes were only tested against dev/pd locally), add a
+    custom team domain if wanted (the app must stay **same-origin with the API**: no CORS,
+    HTTPS, SPA fallback, proxy turning `X-Session-Key` into `Cookie: PHPSESSID=…`).
 11. **Legacy typo**: the first events tab uses the caption `Přicházející`
     (`captions.ts:45`, `EventHeader.tsx:16`); the usual Czech is `Nadcházející`.
 
