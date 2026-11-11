@@ -20,6 +20,7 @@ import { queryKeys } from '../../lib/queryClient'
 import { useAuth } from '../../lib/auth'
 import { bbcodeToHtml } from '../../lib/bbcode'
 import { formatDisplayTime, formatRelativeTime } from '../../lib/date-filters'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 /** Emoji offered in the picker (the legacy app has a huge picker; this is enough). */
@@ -30,7 +31,7 @@ export const authorName = (post: DiscussionPost): string =>
   post.createdBy?.displayName ||
   post.createdBy?.login ||
   post.userName ||
-  'Neznámý autor'
+  tr('Neznámý autor')
 
 type ChatData = { pages: DiscussionPage[]; pageParams: number[] }
 
@@ -187,7 +188,7 @@ export default function ChatMessage(props: ChatMessageProps) {
 
   const removeMessage = () => {
     setMenuOpen(false)
-    if (!window.confirm('Smazat tento příspěvek?')) return
+    if (!window.confirm(tr('Smazat tento příspěvek?'))) return
     deleteMutation.mutate()
   }
 
@@ -248,7 +249,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                   </span>
                 </Show>
                 <Show when={props.post.sticky}>
-                  <span class="badge bg-warning-light text-warning">Připnuto</span>
+                  <span class="badge bg-warning-light text-warning">{tr('Připnuto')}</span>
                 </Show>
               </div>
             </Show>
@@ -259,7 +260,7 @@ export default function ChatMessage(props: ChatMessageProps) {
             <button
               type="button"
               class="header-btn p-1.5 rounded-md hover:bg-100"
-              aria-label="Možnosti zprávy"
+              aria-label={tr('Možnosti zprávy')}
               aria-expanded={menuOpen()}
               onClick={toggleMenu}
             >
@@ -278,7 +279,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                         type="button"
                         class="p-1 rounded hover:bg-100 text-base leading-none"
                         classList={{ 'bg-primary-light': iReacted(emoji) }}
-                        title={iReacted(emoji) ? 'Zrušit reakci' : 'Reagovat'}
+                        title={iReacted(emoji) ? tr('Zrušit reakci') : tr('Reagovat')}
                         onClick={() => toggleReaction(emoji)}
                       >
                         {emoji}
@@ -293,7 +294,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                   onClick={copyMessage}
                 >
                   <span class="icon-sm" innerHTML={copied() ? ICONS['check'] : ICONS['copy']} />
-                  {copied() ? 'Zkopírováno' : 'Kopírovat'}
+                  {copied() ? tr('Zkopírováno') : tr('Kopírovat')}
                 </button>
 
                 <Show when={props.canEdit}>
@@ -315,7 +316,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                     disabled={stickMutation.isPending}
                   >
                     <span class="icon-sm" innerHTML={ICONS['pin']} />
-                    {props.post.sticky ? 'Odšpendlit' : 'Připnout'}
+                    {props.post.sticky ? tr('Odšpendlit') : tr('Připnout')}
                   </button>
                 </Show>
 
@@ -345,7 +346,7 @@ export default function ChatMessage(props: ChatMessageProps) {
             class="input w-full text-sm min-h-[72px] resize-y"
             value={draft()}
             onInput={e => setDraft(e.currentTarget.value)}
-            aria-label="Upravit příspěvek"
+            aria-label={tr('Upravit příspěvek')}
             autofocus
           />
           <div class="flex items-center gap-2 mt-1.5">
@@ -355,7 +356,7 @@ export default function ChatMessage(props: ChatMessageProps) {
               onClick={saveEdit}
               disabled={editMutation.isPending || !draft().trim()}
             >
-              {editMutation.isPending ? 'Ukládám…' : 'Uložit'}
+              {editMutation.isPending ? tr('Ukládám…') : tr('Uložit')}
             </button>
             <button
               type="button"
@@ -363,11 +364,11 @@ export default function ChatMessage(props: ChatMessageProps) {
               onClick={() => setEditing(false)}
               disabled={editMutation.isPending}
             >
-              Zrušit
+              {tr('Zrušit')}
             </button>
             <Show when={editMutation.isError}>
               <span class="text-xs text-danger">
-                {(editMutation.error as Error | null)?.message ?? 'Uložení se nezdařilo.'}
+                {(editMutation.error as Error | null)?.message ?? tr('Uložení se nezdařilo.')}
               </span>
             </Show>
           </div>
@@ -384,7 +385,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                     'bg-primary-light border-primary text-text': iReacted(emoji),
                     'bg-50 border-border text-text-secondary': !iReacted(emoji)
                   }}
-                  title={iReacted(emoji) ? 'Zrušit reakci' : 'Reagovat'}
+                  title={iReacted(emoji) ? tr('Zrušit reakci') : tr('Reagovat')}
                   onClick={() => toggleReaction(emoji)}
                 >
                   <span class="text-sm leading-none">{emoji}</span>

@@ -9,7 +9,7 @@ export default defineConfig({
     solid(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'robots.txt'],
+      includeAssets: ['favicon-32.png', 'favicon-192.png', 'apple-touch-icon.png', 'robots.txt'],
       manifest: {
         name: 'tymy.cz',
         short_name: 'Tymy',

@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from '@solidjs/router'
 import { checkTeam } from '../../lib/api'
 import { TEAM_DOMAIN, normalizeTeam, storeTeam, suggestedTeam } from '../../lib/team'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function TeamPage() {
@@ -24,7 +25,7 @@ export default function TeamPage() {
     e.preventDefault()
     const team = normalizeTeam(name())
     if (!team) {
-      setError('Zadejte prosím adresu týmu.')
+      setError(tr('Zadejte prosím adresu týmu.'))
       return
     }
 
@@ -33,7 +34,7 @@ export default function TeamPage() {
     try {
       const found = await checkTeam(team)
       if (!found) {
-        setError(`Tým „${team}.${TEAM_DOMAIN}“ nebyl nalezen.`)
+        setError(tr('Tým „{team}.{domain}“ nebyl nalezen.', { team, domain: TEAM_DOMAIN }))
         return
       }
       storeTeam(team)
@@ -66,7 +67,7 @@ export default function TeamPage() {
                 setError(null)
               }}
               placeholder="tym"
-              aria-label="Adresa týmu"
+              aria-label={tr('Adresa týmu')}
               autocomplete="off"
               autocapitalize="none"
               spellcheck={false}
@@ -80,7 +81,7 @@ export default function TeamPage() {
             </span>
           </div>
           <p class="text-xs text-muted text-center">
-            Například <span class="font-medium text-text">dev.{TEAM_DOMAIN}</span>
+            {tr('Například')} <span class="font-medium text-text">dev.{TEAM_DOMAIN}</span>
           </p>
 
           <Show when={error()}>
@@ -99,14 +100,14 @@ export default function TeamPage() {
             ) : (
               <span class="flex items-center justify-center gap-2">
                 <span class="icon-sm" innerHTML={ICONS['back']} style="transform: rotate(180deg)" />
-                Pokračovat na přihlášení
+                {tr('Pokračovat na přihlášení')}
               </span>
             )}
           </button>
         </form>
 
         <p class="text-xs text-muted text-center mt-6">
-          Adresu týmu najdete v e-mailu od správce týmu.
+          {tr('Adresu týmu najdete v e-mailu od správce týmu.')}
         </p>
       </div>
     </div>

@@ -16,7 +16,9 @@ import {
 import { queryKeys } from '../../lib/queryClient'
 import { useAuth } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { parseApiDate } from '../../lib/date-filters'
+import { getLocale } from '../../lib/prefs'
 import { ICONS } from '../../lib/icons'
 import ChatMessage from './ChatMessage'
 
@@ -44,10 +46,10 @@ const dayStart = (date: Date): number =>
 function dayLabel(date: Date): string {
   const today = new Date()
   const diffDays = Math.round((dayStart(today) - dayStart(date)) / 86_400_000)
-  if (diffDays === 0) return 'Dnes'
-  if (diffDays === 1) return 'Včera'
+  if (diffDays === 0) return tr('Dnes')
+  if (diffDays === 1) return tr('Včera')
   return date.toLocaleDateString(
-    'cs-CZ',
+    getLocale(),
     date.getFullYear() === today.getFullYear()
       ? { weekday: 'long', day: 'numeric', month: 'long' }
       : { day: 'numeric', month: 'numeric', year: 'numeric' }
@@ -95,7 +97,7 @@ function Loading() {
     <div class="flex items-center justify-center h-64">
       <div class="flex flex-col items-center gap-4">
         <span class="icon icon-lg text-primary animate-spin" innerHTML={ICONS['spinner']} />
-        <p class="text-muted">Načítání…</p>
+        <p class="text-muted">{tr('Načítání…')}</p>
       </div>
     </div>
   )
@@ -284,7 +286,7 @@ export default function DiscussionDetailPage() {
         replacement = `[code]${selected || 'kód'}[/code]`
         break
       case 'list':
-        replacement = `[list]\n[*]${selected || 'položka 1'}\n[*]položka 2\n[/list]`
+        replacement = `[list]\n[*]${selected || tr('položka 1')}\n[*]${tr('položka 2')}\n[/list]`
         break
     }
     setNewPost(text.slice(0, start) + replacement + text.slice(end))
@@ -357,7 +359,7 @@ export default function DiscussionDetailPage() {
   const renderItem = (item: ChatItem) => (
     <ErrorBoundary
       fallback={
-        <p class="py-3 text-xs text-danger">Tento příspěvek se nepodařilo zobrazit.</p>
+        <p class="py-3 text-xs text-danger">{tr('Tento příspěvek se nepodařilo zobrazit.')}</p>
       }
     >
       {renderItemBody(item)}
@@ -370,9 +372,9 @@ export default function DiscussionDetailPage() {
         when={discussion()}
         fallback={
           <div class="text-center p-8">
-            <h2 class="text-xl font-semibold text-text mb-2">Diskuze nenalezena</h2>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('Diskuze nenalezena')}</h2>
             <button class="btn btn-primary" onClick={() => navigate('/discussions')}>
-              Zpět na chat
+              {tr('Zpět na chat')}
             </button>
           </div>
         }
@@ -384,19 +386,19 @@ export default function DiscussionDetailPage() {
               <button
                 class="header-btn p-2 rounded-lg hover:bg-100"
                 onClick={() => navigate('/discussions')}
-                aria-label="Zpět na chat"
+                aria-label={tr('Zpět na chat')}
               >
                 <span class="icon" innerHTML={ICONS['back']} />
               </button>
               <div class="min-w-0 flex-1">
                 <h1 class="text-base font-semibold text-text truncate">{info().caption}</h1>
                 <div class="flex items-center gap-2 text-xs text-muted">
-                  <span>{info().numberOfPosts} příspěvků</span>
+                  <span>{tr('{n} příspěvků', { n: info().numberOfPosts })}</span>
                   <Show when={info().publicRead}>
-                    <span class="badge bg-success-light text-success">Veřejné</span>
+                    <span class="badge bg-success-light text-success">{tr('Veřejné')}</span>
                   </Show>
                   <Show when={!info().canWrite}>
-                    <span class="badge bg-danger-light text-danger">Uzamčeno</span>
+                    <span class="badge bg-danger-light text-danger">{tr('Uzamčeno')}</span>
                   </Show>
                   <Show when={info().description}>
                     <span class="hidden sm:block truncate">{info().description}</span>
@@ -419,19 +421,19 @@ export default function DiscussionDetailPage() {
                       <span
                         class="icon-sm text-muted animate-spin"
                         innerHTML={ICONS['spinner']}
-                        aria-label="Načítání starších příspěvků"
+                        aria-label={tr('Načítání starších příspěvků')}
                       />
                     </div>
                   </Show>
                   <Show when={!postsQuery.hasNextPage && messages().length > 0}>
-                    <p class="text-center text-xs text-muted pt-3">Začátek diskuze</p>
+                    <p class="text-center text-xs text-muted pt-3">{tr('Začátek diskuze')}</p>
                   </Show>
 
                   <Show
                     when={messages().length > 0}
                     fallback={
                       <p class="text-center text-muted py-10">
-                        Zatím žádné příspěvky. Napište první zprávu.
+                        {tr('Zatím žádné příspěvky. Napište první zprávu.')}
                       </p>
                     }
                   >
@@ -441,10 +443,10 @@ export default function DiscussionDetailPage() {
                   <Show when={postsQuery.isError}>
                     <div class="flex flex-col items-center gap-2 py-6">
                       <p class="text-sm text-danger">
-                        {(postsQuery.error as Error | null)?.message ?? 'Načtení se nezdařilo.'}
+                        {(postsQuery.error as Error | null)?.message ?? tr('Načtení se nezdařilo.')}
                       </p>
                       <button class="btn btn-secondary btn-sm" onClick={() => postsQuery.refetch()}>
-                        Zkusit znovu
+                        {tr('Zkusit znovu')}
                       </button>
                     </div>
                   </Show>
@@ -458,7 +460,7 @@ export default function DiscussionDetailPage() {
                   onClick={() => scrollToBottom(true)}
                 >
                   <span class="icon-sm" innerHTML={ICONS['chevronDown']} />
-                  Nejnovější
+                  {tr('Nejnovější')}
                 </button>
               </Show>
             </div>
@@ -469,7 +471,7 @@ export default function DiscussionDetailPage() {
                 when={info().canWrite}
                 fallback={
                   <p class="px-4 py-4 text-sm text-muted text-center">
-                    Do této diskuze nemůžete přispívat.
+                    {tr('Do této diskuze nemůžete přispívat.')}
                   </p>
                 }
               >
@@ -488,15 +490,15 @@ export default function DiscussionDetailPage() {
                       }}
                       onKeyDown={handleKeyDown}
                       placeholder={tDiscussions('writePost')}
-                      aria-label="Nová zpráva"
+                      aria-label={tr('Nová zpráva')}
                       disabled={createMutation.isPending}
                     />
                     <button
                       type="submit"
                       class="header-btn w-9 h-9 rounded-md mb-1 flex-shrink-0 hover:bg-100 disabled:cursor-not-allowed disabled:opacity-40"
                       disabled={createMutation.isPending || !newPost().trim()}
-                      aria-label="Odeslat"
-                      title="Odeslat (Enter)"
+                      aria-label={tr('Odeslat')}
+                      title={tr('Odeslat (Enter)')}
                     >
                       <span
                         class="icon-md"
@@ -512,8 +514,8 @@ export default function DiscussionDetailPage() {
                         <button
                           type="button"
                           class="p-2 rounded-md text-muted hover:bg-100 hover:text-text"
-                          title={btn.title}
-                          aria-label={btn.title}
+                          title={tr(btn.title)}
+                          aria-label={tr(btn.title)}
                           onClick={() => insertBbcode(btn.tag)}
                         >
                           <span class="icon-sm" innerHTML={ICONS[btn.icon]} />
@@ -524,7 +526,7 @@ export default function DiscussionDetailPage() {
 
                   <Show when={createMutation.isError}>
                     <p class="mt-2 text-xs text-danger">
-                      {(createMutation.error as Error | null)?.message ?? 'Odeslání se nezdařilo.'}
+                      {(createMutation.error as Error | null)?.message ?? tr('Odeslání se nezdařilo.')}
                     </p>
                   </Show>
                 </form>

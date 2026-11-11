@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/solid-query'
 import { getMenuPolls, type Poll } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function PollsPage() {
@@ -30,7 +31,7 @@ export default function PollsPage() {
             <div class="text-center py-12">
               <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['poll']} />
               <h3 class="text-lg font-medium text-text mb-1">{tPolls('noPolls')}</h3>
-              <p class="text-muted">Momentálně nejsou k dispozici žádné otevřené ankety.</p>
+              <p class="text-muted">{tr('Momentálně nejsou k dispozici žádné otevřené ankety.')}</p>
             </div>
           }
         >
@@ -53,19 +54,19 @@ export default function PollsPage() {
                             'bg-danger-light text-danger': poll.status === 'CLOSED'
                           }}
                         >
-                          {poll.status === 'CLOSED' ? 'Uzavřeno' : 'Otevřeno'}
+                          {poll.status === 'CLOSED' ? tr('Uzavřeno') : tr('Otevřeno')}
                         </span>
                       </div>
                       <Show when={poll.description}>
                         <p class="text-sm text-muted mt-1 line-clamp-2">{poll.description}</p>
                       </Show>
                       <div class="flex flex-wrap items-center gap-2 mt-3 text-xs text-muted">
-                        <span>{poll.votes?.length ?? 0} hlasů</span>
+                        <span>{tr('{n} hlasů', { n: poll.votes?.length ?? 0 })}</span>
                         <Show when={poll.anonymousResults}>
-                          <span class="badge bg-secondary-light text-secondary">Anonymní</span>
+                          <span class="badge bg-secondary-light text-secondary">{tr('Anonymní')}</span>
                         </Show>
                         <Show when={poll.voted}>
-                          <span class="badge bg-primary-light text-primary">Hlasováno</span>
+                          <span class="badge bg-primary-light text-primary">{tr('Hlasováno')}</span>
                         </Show>
                       </div>
                     </div>

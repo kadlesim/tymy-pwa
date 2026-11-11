@@ -4,6 +4,7 @@ import { createSignal } from 'solid-js'
 import { useNavigate, useParams } from '@solidjs/router'
 import { doResetPassword } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../layout/Layout'
 
 export default function ResetPasswordPage() {
@@ -25,22 +26,22 @@ export default function ResetPasswordPage() {
     setError(null)
     
     if (!password()) {
-      setError('Heslo je povinné')
+      setError(tr('Heslo je povinné'))
       return
     }
     
     if (password().length < 6) {
-      setError('Heslo musí mít alespoň 6 znaků')
+      setError(tr('Heslo musí mít alespoň 6 znaků'))
       return
     }
     
     if (password() !== confirmPassword()) {
-      setError('Hesla se neshodují')
+      setError(tr('Hesla se neshodují'))
       return
     }
     
     if (!resetCode) {
-      setError('Neplatný nebo chybějící resetovací kód')
+      setError(tr('Neplatný nebo chybějící resetovací kód'))
       return
     }
     
@@ -51,9 +52,9 @@ export default function ResetPasswordPage() {
       setSuccess(true)
     } catch (err: any) {
       if (err.message?.includes('expired') || err.message?.includes('starý')) {
-        setError('Tento odkaz již vypršel. Požádejte o nový reset hesla.')
+        setError(tr('Tento odkaz již vypršel. Požádejte o nový reset hesla.'))
       } else if (err.message?.includes('invalid') || err.message?.includes('neplatný')) {
-        setError('Neplatný resetovací kód.')
+        setError(tr('Neplatný resetovací kód.'))
       } else {
         setError(err.message || tErrors('unknown'))
       }
@@ -67,10 +68,10 @@ export default function ResetPasswordPage() {
       <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up">
         <div class="text-center mb-6">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light text-primary mb-4">
-            <span class="icon text-2xl">🔒</span>
+            <span class="icon icon-lg" innerHTML={ICONS['lock']} />
           </div>
-          <h1 class="text-2xl font-bold text-text">Nastavit nové heslo</h1>
-          <p class="text-muted mt-1">Zadejte nové heslo pro svůj účet</p>
+          <h1 class="text-2xl font-bold text-text">{tr('Nastavit nové heslo')}</h1>
+          <p class="text-muted mt-1">{tr('Zadejte nové heslo pro svůj účet')}</p>
         </div>
         
         {error() && (
@@ -84,21 +85,21 @@ export default function ResetPasswordPage() {
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light text-success mb-4">
               <span class="icon icon-lg" innerHTML={ICONS['check']} />
             </div>
-            <h2 class="text-xl font-semibold text-text mb-2">Heslo změněno</h2>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('Heslo změněno')}</h2>
             <p class="text-muted mb-6">
-              Vaše heslo bylo úspěšně aktualizováno. Nyní se můžete přihlásit novým heslem.
+              {tr('Vaše heslo bylo úspěšně aktualizováno. Nyní se můžete přihlásit novým heslem.')}
             </p>
             <button
               class="btn btn-primary w-full"
               onClick={() => navigate('/login')}
             >
-              Přejít k přihlášení
+              {tr('Přejít k přihlášení')}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} class="space-y-4">
             <div>
-              <label for="password" class="label">Nové heslo</label>
+              <label for="password" class="label">{tr('Nové heslo')}</label>
               <div class="relative">
                 <input
                   id="password"
@@ -106,7 +107,7 @@ export default function ResetPasswordPage() {
                   class="input w-full pr-10"
                   value={password()}
                   onInput={e => setPassword(e.currentTarget.value)}
-                  placeholder="Min. 6 znaků"
+                  placeholder={tr('Min. 6 znaků')}
                   required
                   disabled={isLoading()}
                   autocomplete="new-password"
@@ -115,22 +116,22 @@ export default function ResetPasswordPage() {
                   type="button"
                   class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text"
                   onClick={() => setShowPassword(!showPassword())}
-                  aria-label={showPassword() ? 'Skrýt heslo' : 'Zobrazit heslo'}
+                  aria-label={showPassword() ? tr('Skrýt heslo') : tr('Zobrazit heslo')}
                 >
-                  <span class="icon">👁</span>
+                  <span class="icon" innerHTML={ICONS['eye']} />
                 </button>
               </div>
             </div>
             
             <div>
-              <label for="confirmPassword" class="label">Potvrdit nové heslo</label>
+              <label for="confirmPassword" class="label">{tr('Potvrdit nové heslo')}</label>
               <input
                 id="confirmPassword"
                 type={showPassword() ? 'text' : 'password'}
                 class="input w-full mt-1"
                 value={confirmPassword()}
                 onInput={e => setConfirmPassword(e.currentTarget.value)}
-                placeholder="Znovu zadat heslo"
+                placeholder={tr('Znovu zadat heslo')}
                 required
                 disabled={isLoading()}
                 autocomplete="new-password"
@@ -148,7 +149,7 @@ export default function ResetPasswordPage() {
                   {tCommon('loading')}
                 </span>
               ) : (
-                'Uložit nové heslo'
+                tr('Uložit nové heslo')
               )}
             </button>
           </form>
@@ -159,7 +160,7 @@ export default function ResetPasswordPage() {
             class="text-primary hover:underline font-medium"
             onClick={() => navigate('/login')}
           >
-            Zpět k přihlášení
+            {tr('Zpět k přihlášení')}
           </button>
         </p>
       </div>

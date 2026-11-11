@@ -1,5 +1,6 @@
 import { Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
+import { tr } from '../../lib/i18n'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import type { Event } from '../../lib/api'
 
@@ -13,11 +14,11 @@ const TYPE_COLORS: Record<string, string> = {
 
 function statusLabel(status: string): string {
   switch (status) {
-    case 'upcoming': return 'Přicházející'
-    case 'open': return 'Otevřeno pro přihlášky'
-    case 'ongoing': return 'Právě teď'
-    case 'closed': return 'Uzavřeno'
-    case 'past': return 'Minulé'
+    case 'upcoming': return tr('Přicházející')
+    case 'open': return tr('Otevřeno pro přihlášky')
+    case 'ongoing': return tr('Právě teď')
+    case 'closed': return tr('Uzavřeno')
+    case 'past': return tr('Minulé')
     default: return status
   }
 }
@@ -48,7 +49,7 @@ export default function EventHeader(props: EventHeaderProps) {
             <div class="min-w-0">
               <h1 class="text-2xl font-bold text-text">{props.event.caption}</h1>
               <span
-                class="badge text-xs"
+                class="badge type-badge text-xs"
                 style={`background-color: var(--color-${color()}-light); color: var(--color-${color()})`}
               >
                 {props.event.eventType?.caption || props.event.type}
@@ -79,8 +80,8 @@ export default function EventHeader(props: EventHeaderProps) {
               type="button"
               class="header-btn p-2 rounded-md hover:bg-100"
               onClick={props.onEdit}
-              title="Upravit událost"
-              aria-label="Upravit událost"
+              title={tr('Upravit událost')}
+              aria-label={tr('Upravit událost')}
             >
               <span class="icon" innerHTML={ICONS['edit']} />
             </button>
@@ -90,8 +91,8 @@ export default function EventHeader(props: EventHeaderProps) {
               type="button"
               class="header-btn p-2 rounded-md hover:bg-danger-light hover:text-danger"
               onClick={props.onDelete}
-              title="Smazat událost"
-              aria-label="Smazat událost"
+              title={tr('Smazat událost')}
+              aria-label={tr('Smazat událost')}
             >
               <span class="icon" innerHTML={ICONS['delete']} />
             </button>

@@ -10,7 +10,8 @@ earlier pitfalls. Keep this file current when significant things change.
 ## 0. Where we left off (resume here)
 
 **Everything below is committed and pushed; the working tree is clean.**
-Latest commit: `05992d2` — Cloudflare Pages functions for `/api` and `/user_pics`.
+Latest commit: dark mode, English UI, text size, logo icons and the event-management
+polish (run `git log -1` for the hash).
 Remote: `github.com/kadlesim/tymy-pwa`, `master` in sync with `origin/master`.
 
 State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
@@ -21,11 +22,17 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
   grouped by answer (§5). Management page at `/events/manage` (bulk delete + series
   builder, §5).
 - **Chat**: bottom composer, newest at the bottom, older pages on scroll-up, per-message
-  hover menu (react/copy/edit/pin/delete) with server-mirroring rights.
+  hover menu (react/copy/edit/pin/delete) with server-mirroring rights. "Nová diskuze" is
+  shown only when the user can write in some discussion (§5 — the API exposes no
+  `canCreate` flag).
 - **Chat view is intentionally borderless**; **UI is neutral grey**, tight radii, MDI Light
   icons only (no emoji) (§2).
+- **Preferences**: dark mode, Czech/English UI and a larger text size — icons next to the
+  bell on desktop, the same controls in the drawer on phones, plus Profile → Nastavení →
+  Vzhled (§5).
 - **Team selection** before login (`/team`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
+- **App/PWA icons and the favicon are generated from `logo.png`** (`npm run icons`).
 
 **Deployment is live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`.
 `functions/` (Pages Functions for `/api` and `/user_pics`), `public/_redirects` (SPA
@@ -77,7 +84,12 @@ unchanged and still semantic. **Only buttons with a text label are filled**: ico
 controls (send, header, drawer) and the decorative list icons are flat glyphs with a
 hover background at most.
 
-Bundle ≈ **65 kB gzipped** (JS ~47 kB + CSS ~9 kB + vendor ~15 kB).
+Theme + text size (2026-11-11): `.dark` remaps the neutral scale (50–200 = surfaces,
+500–900 = text) and lifts `text-primary`; the root font size becomes 18 px when
+`<html data-text-size="large">`. The language lives on `<html lang>`.
+
+Bundle ≈ **75 kB gzipped** (JS ~56 kB + CSS ~10 kB + vendor ~15 kB); the i18n dictionary
+is the biggest recent addition.
 
 ---
 
@@ -157,6 +169,8 @@ src/
 │   ├── api.ts          typed client, envelope unwrap, login, filters, apiAssetUrl
 │   ├── auth.ts         reactive auth store (login/register/logout/reset, guards)
 │   ├── captions.ts     i18n with built-in Czech defaults
+│   ├── i18n.ts         `tr()` for hard-coded UI strings (Czech source → English)
+│   ├── prefs.ts        theme / language / text size (localStorage + <html>)
 │   ├── team.ts         team (subdomain) selection, stored as `tymy:team`
 │   ├── bbcode.ts       safe BBCode ↔ HTML
 │   ├── date-filters.ts API date formatting + display helpers
@@ -184,7 +198,7 @@ src/
 ```
 
 Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.cjs`,
-`tsconfig.json` (`noEmit: true`), `scripts/generate-icons.mjs`.
+`tsconfig.json` (`noEmit: true`), `scripts/generate-icons.mjs` (sharp, reads `logo.png`).
 
 ---
 
@@ -196,11 +210,28 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   checkboxes and per-row edit/delete icons. Multi-select delete calls `DELETE /event/{id}`
   per row and aggregates the results with `Promise.allSettled`; rows are selectable only
   when `canPlan`/`canPlanOthers` is set, and the server still enforces `SYS:EVE_DELETE`.
-  Below the table sits a **series builder**: caption/type/place/link/description, weekday
+  Below the filters sits a **series builder**: caption/type/place/link/description, weekday
   chips, date range, start time, duration and close offset; it previews the generated
   dates and posts an **array** to `POST /events/create` (the endpoint is natively bulk)
   with a 200-event cap. The events page links to it via "Správa" next to "Nová událost",
   and `/events/create` is now reachable from there too.
+- **Preferences** (`src/lib/prefs.ts`): `tymy:theme` (`light|dark`), `tymy:lang`
+  (`cs|en`) and `tymy:text-size` (`normal|large`), applied to `<html>` by `initPrefs()`
+  before the first render (no flash of the wrong theme). Controls: three icon buttons next
+  to the bell on `md+`; the same three as labelled segmented controls in the drawer on
+  phones (the header hides them below `md`); Profile → Nastavení → Vzhled repeats them.
+- **i18n**: `tr()` in `src/lib/i18n.ts` is keyed by the **Czech source string** — no
+  separate keys, and anything missing from the English dictionary falls back to Czech
+  instead of rendering a key. `{name}` placeholders are filled through the second
+  argument. Dates use `getLocale()`; the `captions.ts` domains keep their codes and now
+  also have English defaults. Server-provided text (event type captions, discussion
+  posts, status captions) stays in the team's language.
+- **Events view switch**: icons only (list / calendar), 24 px glyphs in 40 px square
+  buttons; the active half is filled with `--color-primary`. Accessible names come from
+  `aria-label`/`title` (no visible text). The views are the list (grouped by day, closest
+  to now first) and a Google-Calendar style month grid (`EventMonthView`) with month
+  navigation, today highlighted and event pills that open `/events/:id`; the grid queries
+  the visible month only.
 - **Events list = one server query per tab:**
   - Upcoming: `startTime >= now`, order `startTime__asc` (closest first)
   - Pending attendance ("Nevyplněná docházka"): `endTime >= now`, order `startTime__asc`,
@@ -208,12 +239,6 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     count. Its query runs independently so the badge is right on every tab.
   - Past: `endTime < now`, order `startTime__desc`, **limit 40**
   - Empty “Upcoming” shows a button that switches to “Past”.
-- **Events view switch**: a two-item segmented control with icon + label
-  ("Seznam" / "Kalendář") whose active half is filled with `--color-primary` (it carries a
-  text label, so the "filled buttons need a label" rule still holds). The views: list
-  (grouped by day, closest to now first) or a Google-Calendar style month grid
-  (`EventMonthView`) with month navigation, today highlighted and event pills that open
-  `/events/:id`. The grid queries the visible month only.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
 - **Event attendance** (`EventRsvp` + `EventAttendance`):
@@ -381,6 +406,19 @@ smoke test confirmed:
   `.input` (defined after `@tailwind utilities`) overrides `pl-8` — padding is now inline.
 - Not exercised: the actual `POST /events/create` and `DELETE /event/{id}` calls (mock only).
 
+### 2026-11-11 — preferences, English UI, logo icons (mock-verified)
+
+- Headless Edge against the mocked API with `tymy:theme=dark`, `tymy:lang=en` and
+  `tymy:text-size=large`: `<html class="dark" lang="en">`, root font 18 px, "Event
+  management" / "Bulk deletion and creation of events…" in English, drawer block
+  "Appearance and language" with Light/Dark, CS/EN and A/A, "New discussion" visible
+  (mock discussion has `canWrite`), **0 console errors**.
+- Light/Czech regression pass on `/events` and `/events/manage`: selects bind, icon-only
+  view switch reachable through `aria-label`, **0 console errors**.
+- `npm run build` clean; `npm run icons` generated every manifest size plus
+  `favicon-32.png`, `favicon-192.png` and `apple-touch-icon.png` from `logo.png`.
+- Also fixed while there: the two remaining emoji glyphs (🔑, 👁) became MDI `lock`/`eye`.
+
 ---
 
 ## 7. Open items / next steps (priority order)
@@ -410,8 +448,8 @@ smoke test confirmed:
    TEXT/NUMBER semantics could differ from server expectations.
 7. **Tests**: none. Suggested — Vitest for `bbcode`, `date-filters`, filter builder;
    Playwright/Vitest browser for login → events → RSVP.
-8. **App icons** are procedural placeholders (`npm run icons`) — replace with real
-   artwork. (The in-app UI icons are already Material Design Light, see §2.)
+8. **App icons** are generated from `logo.png` (`npm run icons`, sharp); the procedural
+   placeholders and `favicon.svg` are gone.
 9. **Push notifications** need a backend VAPID key + subscription endpoint.
 10. **Production hosting** — **done, live at <https://tymy-pwa.pages.dev>** (§0, §6).
     Cloudflare Pages + the two Pages Functions, `TYMY_DEFAULT_TEAM=pd`. Remaining follow-ups:
@@ -420,6 +458,14 @@ smoke test confirmed:
     HTTPS, SPA fallback, proxy turning `X-Session-Key` into `Cookie: PHPSESSID=…`).
 11. **Legacy typo**: the first events tab uses the caption `Přicházející`
     (`captions.ts:45`, `EventHeader.tsx:16`); the usual Czech is `Nadcházející`.
+12. **Discussion create right** is a heuristic: `canCreateDiscussion()` shows the button
+    when any discussion has `canWrite` (admins implicitly may). The API exposes no
+    `canCreate`/`SYS:DIS_CREATE` flag — swap the heuristic once one appears.
+13. **i18n** covers the UI; server data (event type captions, status captions, discussion
+    posts, names) stays in the team's language. Missing `tr()` keys fall back to Czech
+    silently, so add entries to `src/lib/i18n.ts` with every new string.
+14. **`npm run icons` needs `logo.png`** in the repo root and the `sharp` devDependency;
+    it rewrites `public/icons/*` plus the favicons.
 
 ---
 
@@ -431,7 +477,7 @@ npm run dev        # http://localhost:3000 (proxies /api and /user_pics to dev.t
 npm run typecheck  # tsc --noEmit
 npm run build      # type-check + dist/
 npm run preview    # serve dist/
-npm run icons      # regenerate PNG app icons
+npm run icons      # regenerate PWA icons + favicons from logo.png (sharp)
 ```
 
 ---
@@ -481,7 +527,20 @@ npm run icons      # regenerate PNG app icons
   (`application/octet-stream`, `PK` magic), not `{status, data}` — use `requestBlob()`,
   never `request()`.
 - **One icon set only** (Material Design Light). No emoji/unicode glyphs in the UI — the
-  old `⏳` splash and `✓` screens have been replaced by `ICONS['spinner']` / `ICONS['check']`.
+  old `⏳` splash and `✓` screens have been replaced by `ICONS['spinner']` / `ICONS['check']`;
+  🔑/👁 became `ICONS['lock']`/`ICONS['eye']`. (Chat *reactions* are deliberately emoji.)
+- **The bundled MDI Light package only ships 263 glyphs** — there is no moon, globe or
+  text-size icon, so those three preference glyphs are hand-written SVGs in `icons.ts`.
+- **`tr()` is keyed by the Czech source string**, so two identical Czech words share one
+  entry (`Ne` was both "No" and "Sunday" — the weekday now wins). TypeScript rejects
+  duplicate object keys, which is the guard against accidental collisions.
+- **`.dark` remaps the neutral scale**: `--color-50…200` become surfaces and `--color-500…900`
+  become text. A component that hard-codes `bg-white` (instead of `bg-elevated`) will
+  break in dark mode; the two remaining tab bars were switched to `bg-elevated`.
+- **`.input` (in index.css) overrides Tailwind padding utilities** because it is defined
+  after `@tailwind utilities`; a search field that needs room for an icon must set
+  `padding-left` inline (the manage page does).
+- **`npm run icons` is no longer dependency-free** — it uses `sharp` and reads `logo.png`.
 - **Vite's proxy has no `router` option** in 5.4 (it is silently ignored, so every request
   quietly hit the default host). Multi-team dev routing therefore overrides the `Host`
   header in `proxyReq`; verify with

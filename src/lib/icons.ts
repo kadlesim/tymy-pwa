@@ -28,6 +28,7 @@ import {
   mdilDelete,
   mdilDotsHorizontal,
   mdilDownload,
+  mdilEye,
   mdilFolder,
   mdilFormatBold,
   mdilFormatItalic,
@@ -37,6 +38,7 @@ import {
   mdilGroup,
   mdilImage,
   mdilLink,
+  mdilLock,
   mdilLogout,
   mdilMagnify,
   mdilMenu,
@@ -52,6 +54,10 @@ import {
 
 const icon = (path: string): string =>
   `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`
+
+/** For glyphs that need more than a single filled path (strokes, text). */
+const rawIcon = (inner: string): string =>
+  `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">${inner}</svg>`
 
 export const ICONS: Record<string, string> = {
   // Sections
@@ -101,7 +107,29 @@ export const ICONS: Record<string, string> = {
   plus: icon(mdilPlus),
   search: icon(mdilMagnify),
   clock: icon(mdilClock),
+  lock: icon(mdilLock),
   image: icon(mdilImage),
+  eye: icon(mdilEye),
   // No dedicated spinner glyph in MDI Light; a spinning refresh arrow reads the same.
-  spinner: icon(mdilRefresh)
+  spinner: icon(mdilRefresh),
+
+  // Display preferences (custom glyphs — the bundled MDI Light subset has no moon/globe)
+  themeLight: rawIcon(
+    '<circle cx="12" cy="12" r="4.3"/>' +
+      '<g fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">' +
+      '<path d="M12 2.4v2.7M12 18.9v2.7M2.4 12h2.7M18.9 12h2.7M5.3 5.3l1.9 1.9M16.8 16.8l1.9 1.9M18.7 5.3l-1.9 1.9M7.2 16.8l-1.9 1.9"/>' +
+      '</g>'
+  ),
+  themeDark: rawIcon('<path d="M12.4 3A9 9 0 1 0 21 12.6 7.2 7.2 0 0 1 12.4 3Z"/>'),
+  language: rawIcon(
+    '<g fill="none" stroke="currentColor" stroke-width="1.5">' +
+      '<circle cx="12" cy="12" r="8.4"/>' +
+      '<ellipse cx="12" cy="12" rx="4" ry="8.4"/>' +
+      '<path d="M3.7 12h16.6"/>' +
+      '</g>'
+  ),
+  textSize: rawIcon(
+    '<text x="2.2" y="15.5" font-size="11" font-weight="700" font-family="sans-serif" fill="currentColor">A</text>' +
+      '<text x="11.6" y="20" font-size="15.5" font-weight="700" font-family="sans-serif" fill="currentColor">A</text>'
+  )
 }

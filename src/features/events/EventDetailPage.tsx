@@ -13,6 +13,7 @@ import {
 } from '../../lib/api'
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { useAuth } from '../../lib/auth'
 import { getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
@@ -94,7 +95,7 @@ export default function EventDetailPage() {
   }))
 
   const handleDelete = () => {
-    if (confirm('Opravdu chcete tuto událost smazat? Tato akce je nevratná.')) {
+    if (confirm(tr('Opravdu chcete tuto událost smazat? Tato akce je nevratná.'))) {
       deleteMutation.mutate()
     }
   }
@@ -115,9 +116,9 @@ export default function EventDetailPage() {
         when={eventQuery.data}
         fallback={
           <div class="text-center p-8">
-            <h2 class="text-xl font-semibold text-text mb-2">Událost nenalezena</h2>
-            <p class="text-muted mb-4">Požadovaná událost neexistuje.</p>
-            <button class="btn btn-primary" onClick={() => navigate('/events')}>Zpět k událostem</button>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('Událost nenalezena')}</h2>
+            <p class="text-muted mb-4">{tr('Požadovaná událost neexistuje.')}</p>
+            <button class="btn btn-primary" onClick={() => navigate('/events')}>{tr('Zpět k událostem')}</button>
           </div>
         }
       >
@@ -142,7 +143,7 @@ export default function EventDetailPage() {
                 canRsvp={canRsvp()}
                 isPending={rsvpMutation.isPending}
                 isNotePending={noteMutation.isPending}
-                noteError={noteMutation.isError ? (noteMutation.error as Error | null)?.message ?? 'Poznámku se nepodařilo uložit.' : null}
+                noteError={noteMutation.isError ? (noteMutation.error as Error | null)?.message ?? tr('Poznámku se nepodařilo uložit.') : null}
                 onRsvp={(code) => rsvpMutation.mutate(code)}
                 onNoteSave={(note) => noteMutation.mutate(note)}
               />

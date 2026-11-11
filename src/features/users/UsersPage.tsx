@@ -7,6 +7,7 @@ import { getUsersByStatus, type User, type UserStatus } from '../../lib/api'
 import { apiAssetUrl } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 const STATUSES: UserStatus[] = ['PLAYER', 'MEMBER', 'SICK', 'INIT', 'DELETED']
@@ -49,11 +50,11 @@ export default function UsersPage() {
   return (
     <div class="users-page">
       <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 class="text-xl font-semibold text-text">Tým</h1>
+        <h1 class="text-xl font-semibold text-text">{tr('Tým')}</h1>
         <input
           type="search"
           class="input w-full sm:w-64"
-          placeholder="Hledat člena…"
+          placeholder={tr('Hledat člena…')}
           value={search()}
           onInput={e => setSearch(e.currentTarget.value)}
         />
@@ -67,12 +68,12 @@ export default function UsersPage() {
               aria-selected={status() === s}
               class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors whitespace-nowrap"
               classList={{
-                'bg-white text-primary shadow-sm': status() === s,
+                'bg-elevated text-primary shadow-sm': status() === s,
                 'text-text-secondary hover:text-text': status() !== s
               }}
               onClick={() => setStatus(s)}
             >
-              {STATUS_LABEL[s]}
+              {tr(STATUS_LABEL[s])}
             </button>
           )}
         </For>
@@ -84,8 +85,8 @@ export default function UsersPage() {
           fallback={
             <div class="text-center py-12">
               <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['users']} />
-              <h3 class="text-lg font-medium text-text mb-1">Žádní uživatelé</h3>
-              <p class="text-muted">V této skupině nejsou žádní členové.</p>
+              <h3 class="text-lg font-medium text-text mb-1">{tr('Žádní uživatelé')}</h3>
+              <p class="text-muted">{tr('V této skupině nejsou žádní členové.')}</p>
             </div>
           }
         >

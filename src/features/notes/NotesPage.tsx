@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/solid-query'
 import { getNotesHtml, type Note } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function NotesPage() {
@@ -31,7 +32,7 @@ export default function NotesPage() {
           fallback={
             <div class="text-center py-12">
               <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['chat']} />
-              <h3 class="text-lg font-medium text-text mb-1">Žádné veřejné poznámky</h3>
+              <h3 class="text-lg font-medium text-text mb-1">{tr('Žádné veřejné poznámky')}</h3>
             </div>
           }
         >

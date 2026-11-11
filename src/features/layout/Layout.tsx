@@ -5,6 +5,8 @@ import { useLocation, useNavigate, A } from '@solidjs/router'
 import { useAuth, doLogout, getDisplayName, getUserAvatar } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../../lib/icons'
+import { theme, setTheme, toggleTheme, textSize, setTextSize, toggleTextSize, lang, setLang } from '../../lib/prefs'
+import { tr } from '../../lib/i18n'
 
 export { ICONS }
 
@@ -93,7 +95,7 @@ export default function Layout(props: LayoutProps) {
             class="header-btn p-2 rounded-lg hover:bg-100 lg:hidden"
             data-toggle="sidebar"
             onClick={() => setSidebarOpen(true)}
-            aria-label="Menu"
+            aria-label={tr('Menu')}
             aria-expanded={sidebarOpen()}
           >
             <span class="icon" innerHTML={ICONS['menu']} />
@@ -104,7 +106,7 @@ export default function Layout(props: LayoutProps) {
           </A>
 
           {/* Desktop navigation */}
-          <nav class="hidden lg:flex items-center gap-1 ml-4" aria-label="Hlavní navigace">
+          <nav class="hidden lg:flex items-center gap-1 ml-4" aria-label={tr('Hlavní navigace')}>
             {visibleNavItems().map(item => (
               <A
                 href={item.path}
@@ -112,14 +114,52 @@ export default function Layout(props: LayoutProps) {
                 activeClass="bg-primary-light text-primary"
                 inactiveClass="text-text-secondary hover:bg-100"
               >
-                {item.label}
+                {tr(item.label)}
               </A>
             ))}
           </nav>
         </div>
 
         <div class="flex items-center gap-2">
-          <button class="header-btn p-2 rounded-lg hover:bg-100" aria-label="Notifikace">
+          {/* Display preferences: desktop only — phones get the same controls in the drawer */}
+          <div class="hidden md:flex items-center gap-1" role="group" aria-label={tr('Vzhled a jazyk')}>
+            <button
+              type="button"
+              class="header-btn p-2 rounded-lg hover:bg-100"
+              onClick={toggleTheme}
+              title={theme() === 'dark' ? tr('Světlý režim') : tr('Tmavý režim')}
+              aria-label={theme() === 'dark' ? tr('Světlý režim') : tr('Tmavý režim')}
+              aria-pressed={theme() === 'dark'}
+            >
+              <span
+                class="icon"
+                innerHTML={theme() === 'dark' ? ICONS['themeLight'] : ICONS['themeDark']}
+              />
+            </button>
+
+            <button
+              type="button"
+              class="header-btn p-2 rounded-lg hover:bg-100"
+              onClick={() => setLang(lang() === 'cs' ? 'en' : 'cs')}
+              title={tr('Jazyk')}
+              aria-label={tr('Jazyk')}
+            >
+              <span class="w-5 text-center text-xs font-bold uppercase tracking-wide">{lang()}</span>
+            </button>
+
+            <button
+              type="button"
+              class="header-btn p-2 rounded-lg hover:bg-100"
+              onClick={toggleTextSize}
+              title={tr('Velikost textu')}
+              aria-label={tr('Velikost textu')}
+              aria-pressed={textSize() === 'large'}
+            >
+              <span class="icon" innerHTML={ICONS['textSize']} />
+            </button>
+          </div>
+
+          <button class="header-btn p-2 rounded-lg hover:bg-100" aria-label={tr('Notifikace')}>
             <span class="icon" innerHTML={ICONS['bell']} />
           </button>
 
@@ -128,7 +168,7 @@ export default function Layout(props: LayoutProps) {
               class="header-btn p-1 rounded-full hover:bg-100 flex items-center gap-2"
               data-toggle="user-menu"
               onClick={() => setUserMenuOpen(!userMenuOpen())}
-              aria-label="Uživatelské menu"
+              aria-label={tr('Uživatelské menu')}
               aria-expanded={userMenuOpen()}
             >
               <img
@@ -152,7 +192,7 @@ export default function Layout(props: LayoutProps) {
                   onClick={() => setUserMenuOpen(false)}
                 >
                   <span class="icon-sm" innerHTML={ICONS['user']} />
-                  Profil
+                  {tr('Profil')}
                 </A>
                 <A
                   href="/profile/settings"
@@ -160,7 +200,7 @@ export default function Layout(props: LayoutProps) {
                   onClick={() => setUserMenuOpen(false)}
                 >
                   <span class="icon-sm" innerHTML={ICONS['settings']} />
-                  Nastavení
+                  {tr('Nastavení')}
                 </A>
                 <hr class="my-1 border-border" />
                 <button
@@ -192,16 +232,16 @@ export default function Layout(props: LayoutProps) {
           'translate-x-0': sidebarOpen(),
           '-translate-x-full': !sidebarOpen()
         }}
-        aria-label="Hlavní navigace"
+        aria-label={tr('Hlavní navigace')}
         aria-hidden={!sidebarOpen()}
       >
         <div class="flex flex-col h-full">
           <div class="p-4 border-b border-border flex items-center justify-between">
-            <h2 class="font-semibold text-text">Navigace</h2>
+            <h2 class="font-semibold text-text">{tr('Navigace')}</h2>
             <button
               class="header-btn p-2 rounded-lg hover:bg-100"
               onClick={() => setSidebarOpen(false)}
-              aria-label="Zavřít menu"
+              aria-label={tr('Zavřít menu')}
             >
               <span class="icon" innerHTML={ICONS['collapse']} />
             </button>
@@ -219,11 +259,108 @@ export default function Layout(props: LayoutProps) {
                     onClick={() => setSidebarOpen(false)}
                   >
                     <span class="icon w-5 h-5 flex-shrink-0" innerHTML={ICONS[item.icon]} />
-                    <span class="flex-1 truncate">{item.label}</span>
+                    <span class="flex-1 truncate">{tr(item.label)}</span>
                   </A>
                 </li>
               ))}
             </ul>
+
+            {/* Display preferences — the desktop header shows icons, phones use this block */}
+            <div class="mt-4 pt-4 border-t border-border space-y-3">
+              <p class="px-3 text-xs font-semibold uppercase tracking-wide text-muted">
+                {tr('Vzhled a jazyk')}
+              </p>
+
+              <div class="px-3 flex items-center justify-between gap-3">
+                <span class="text-sm text-text-secondary">{tr('Tmavý režim')}</span>
+                <div class="flex gap-1 bg-100 rounded-md p-0.5" role="group" aria-label={tr('Tmavý režim')}>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-xs font-medium"
+                    classList={{
+                      'bg-primary text-white': theme() === 'light',
+                      'text-text-secondary': theme() !== 'light'
+                    }}
+                    aria-pressed={theme() === 'light'}
+                    onClick={() => setTheme('light')}
+                  >
+                    {tr('Světlý')}
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-xs font-medium"
+                    classList={{
+                      'bg-primary text-white': theme() === 'dark',
+                      'text-text-secondary': theme() !== 'dark'
+                    }}
+                    aria-pressed={theme() === 'dark'}
+                    onClick={() => setTheme('dark')}
+                  >
+                    {tr('Tmavý')}
+                  </button>
+                </div>
+              </div>
+
+              <div class="px-3 flex items-center justify-between gap-3">
+                <span class="text-sm text-text-secondary">{tr('Jazyk')}</span>
+                <div class="flex gap-1 bg-100 rounded-md p-0.5" role="group" aria-label={tr('Jazyk')}>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-xs font-bold uppercase"
+                    classList={{
+                      'bg-primary text-white': lang() === 'cs',
+                      'text-text-secondary': lang() !== 'cs'
+                    }}
+                    aria-pressed={lang() === 'cs'}
+                    onClick={() => setLang('cs')}
+                  >
+                    CS
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-xs font-bold uppercase"
+                    classList={{
+                      'bg-primary text-white': lang() === 'en',
+                      'text-text-secondary': lang() !== 'en'
+                    }}
+                    aria-pressed={lang() === 'en'}
+                    onClick={() => setLang('en')}
+                  >
+                    EN
+                  </button>
+                </div>
+              </div>
+
+              <div class="px-3 flex items-center justify-between gap-3">
+                <span class="text-sm text-text-secondary">{tr('Velikost textu')}</span>
+                <div class="flex gap-1 bg-100 rounded-md p-0.5" role="group" aria-label={tr('Velikost textu')}>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-xs font-semibold"
+                    classList={{
+                      'bg-primary text-white': textSize() === 'normal',
+                      'text-text-secondary': textSize() !== 'normal'
+                    }}
+                    aria-pressed={textSize() === 'normal'}
+                    onClick={() => setTextSize('normal')}
+                  >
+                    A
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2.5 py-1 rounded text-base font-semibold"
+                    classList={{
+                      'bg-primary text-white': textSize() === 'large',
+                      'text-text-secondary': textSize() !== 'large'
+                    }}
+                    aria-pressed={textSize() === 'large'}
+                    onClick={() => setTextSize('large')}
+                  >
+                    A
+                  </button>
+                </div>
+              </div>
+            </div>
 
             <div class="mt-auto pt-4 border-t border-border">
               <div class="px-3 py-2 flex items-center gap-3">
@@ -248,7 +385,7 @@ export default function Layout(props: LayoutProps) {
       </main>
 
       {/* Bottom navigation (mobile) */}
-      <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden" role="navigation" aria-label="Hlavní navigace">
+      <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden" role="navigation" aria-label={tr('Hlavní navigace')}>
         <ul class="flex h-full items-stretch justify-around" role="list">
           {bottomNavItems().map(item => (
             <li class="flex-1 min-w-0">
@@ -259,7 +396,7 @@ export default function Layout(props: LayoutProps) {
                 inactiveClass="text-text-secondary"
               >
                 <span class="icon w-6 h-6" innerHTML={ICONS[item.icon]} />
-                <span class="truncate max-w-full">{item.label}</span>
+                <span class="truncate max-w-full">{tr(item.label)}</span>
               </A>
             </li>
           ))}

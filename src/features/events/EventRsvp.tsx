@@ -2,6 +2,7 @@
 
 import { createEffect, createSignal, For, Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
+import { tr } from '../../lib/i18n'
 import { STATUS_COLORS, STATUS_LABELS } from './constants'
 
 export interface RsvpOption {
@@ -44,7 +45,7 @@ export default function EventRsvp(props: EventRsvpProps) {
     <div class="event-rsvp bg-elevated rounded-xl border border-border p-4 mb-4">
       <h2 class="text-lg font-semibold text-text mb-3 flex items-center gap-2">
         <span class="icon" innerHTML={ICONS['users']} />
-        Vaše účast
+        {tr('Vaše účast')}
       </h2>
 
       <Show
@@ -53,9 +54,9 @@ export default function EventRsvp(props: EventRsvpProps) {
           <div class="flex flex-wrap items-center gap-2">
             <Show
               when={props.myStatus}
-              fallback={<p class="text-muted text-sm">Přihlášky na tuto událost jsou uzavřeny.</p>}
+              fallback={<p class="text-muted text-sm">{tr('Přihlášky na tuto událost jsou uzavřeny.')}</p>}
             >
-              <span class="text-muted text-sm">Zapsaná účast:</span>
+              <span class="text-muted text-sm">{tr('Zapsaná účast:')}</span>
               <span
                 class="badge px-2 py-0.5 text-xs"
                 style={`background-color: var(--color-${STATUS_COLORS[props.myStatus!] || 'secondary'}); color: white`}
@@ -98,7 +99,7 @@ export default function EventRsvp(props: EventRsvpProps) {
 
         <div class="mt-3">
           <label class="label text-xs mb-1" for="rsvp-note">
-            Poznámka
+            {tr('Poznámka')}
           </label>
           <div class="flex items-center gap-2">
             <input
@@ -108,7 +109,7 @@ export default function EventRsvp(props: EventRsvpProps) {
               value={note()}
               maxlength={200}
               placeholder={
-                props.myStatus ? 'Nepovinná poznámka k účasti' : 'Nejprve vyberte účast'
+                props.myStatus ? tr('Nepovinná poznámka k účasti') : tr('Nejprve vyberte účast')
               }
               disabled={!props.myStatus || props.isNotePending}
               onInput={e => setNote(e.currentTarget.value)}
@@ -126,8 +127,8 @@ export default function EventRsvp(props: EventRsvpProps) {
                 class="header-btn p-1.5 rounded-md hover:bg-100 flex-shrink-0"
                 onClick={saveNote}
                 disabled={props.isNotePending}
-                title="Uložit poznámku"
-                aria-label="Uložit poznámku"
+                title={tr('Uložit poznámku')}
+                aria-label={tr('Uložit poznámku')}
               >
                 <span class="icon-sm" innerHTML={ICONS['check']} />
               </button>

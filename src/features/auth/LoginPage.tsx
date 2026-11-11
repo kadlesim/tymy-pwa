@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from '@solidjs/router'
 import { doLogin, useSessionExpired, clearSessionExpired } from '../../lib/auth'
 import { getTeam, teamFromHostname, teamHost } from '../../lib/team'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../layout/Layout'
 
 export default function LoginPage() {
@@ -60,7 +61,7 @@ export default function LoginPage() {
             <span class="icon text-primary" innerHTML={ICONS['calendar']} />
           </div>
           <h1 class="text-2xl font-bold text-text">tymy.cz</h1>
-          <p class="text-muted mt-1">Přihlaste se pro přístup k událostem a chatu</p>
+          <p class="text-muted mt-1">{tr('Přihlaste se pro přístup k událostem a chatu')}</p>
           <Show when={currentTeam()}>
             {(host) => (
               <p class="text-xs text-muted mt-2">
@@ -70,7 +71,7 @@ export default function LoginPage() {
                   class="ml-2 text-primary underline"
                   onClick={() => navigate('/team')}
                 >
-                  změnit tým
+                  {tr('změnit tým')}
                 </button>
               </p>
             )}
@@ -81,7 +82,7 @@ export default function LoginPage() {
         <Show when={useSessionExpired()}>
           <div class="alert mb-4 p-3 rounded-lg bg-warning-light text-warning text-sm flex items-center gap-2 animate-slide-down" role="status">
             <span class="icon flex-shrink-0" innerHTML={ICONS['clock']} />
-            <span>Platnost přihlášení vypršela. Přihlaste se prosím znovu.</span>
+            <span>{tr('Platnost přihlášení vypršela. Přihlaste se prosím znovu.')}</span>
           </div>
         </Show>
 
@@ -103,7 +104,7 @@ export default function LoginPage() {
               class="input w-full mt-1"
               value={loginName()}
               onInput={e => setLoginName(e.currentTarget.value)}
-              placeholder="Přihlašovací jméno"
+              placeholder={tr('Přihlašovací jméno')}
               autocomplete="username"
               required
               disabled={isLoading()}
@@ -129,7 +130,7 @@ export default function LoginPage() {
                 class="input w-full pr-10"
                 value={password()}
                 onInput={e => setPassword(e.currentTarget.value)}
-                placeholder="Heslo"
+                placeholder={tr('Heslo')}
                 autocomplete="current-password"
                 required
                 disabled={isLoading()}
@@ -138,7 +139,7 @@ export default function LoginPage() {
                 type="button"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text"
                 onClick={() => setShowPassword(!showPassword())}
-                aria-label={showPassword() ? 'Skrýt heslo' : 'Zobrazit heslo'}
+                aria-label={showPassword() ? tr('Skrýt heslo') : tr('Zobrazit heslo')}
               >
                 <span class="icon" innerHTML={ICONS['chevronDown']} />
               </button>
@@ -153,7 +154,7 @@ export default function LoginPage() {
                 checked={remember()}
                 onChange={e => setRemember(e.currentTarget.checked)}
               />
-              <span class="text-sm text-text-secondary">Zapamatovat mě</span>
+              <span class="text-sm text-text-secondary">{tr('Zapamatovat mě')}</span>
             </label>
           </div>
           
@@ -175,7 +176,7 @@ export default function LoginPage() {
         
         {/* Register link */}
         <p class="text-center text-sm text-muted mt-6">
-          Ještě nemáte účet?{' '}
+          {tr('Ještě nemáte účet?')}{' '}
           <button 
             class="text-primary hover:underline font-medium"
             onClick={handleRegister}

@@ -1,5 +1,8 @@
 // Date filter utilities for Tymy API
 
+import { getLocale } from './prefs'
+import { tr } from './i18n'
+
 /**
  * Formats a Date to the Tymy API format: YYYYMMDDHHmmss
  * This is the most reliable format according to the API docs
@@ -156,7 +159,7 @@ export function filtersToQueryString(filters: DateFilter[]): string {
  */
 export function formatDisplayDate(date: Date | string, options: Intl.DateTimeFormatOptions = {}): string {
   const d = typeof date === 'string' ? parseApiDate(date) : date
-  return d.toLocaleDateString('cs-CZ', {
+  return d.toLocaleDateString(getLocale(), {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -169,7 +172,7 @@ export function formatDisplayDate(date: Date | string, options: Intl.DateTimeFor
  */
 export function formatDisplayTime(date: Date | string): string {
   const d = typeof date === 'string' ? parseApiDate(date) : date
-  return d.toLocaleTimeString('cs-CZ', {
+  return d.toLocaleTimeString(getLocale(), {
     hour: '2-digit',
     minute: '2-digit'
   })
@@ -193,15 +196,21 @@ export function formatRelativeTime(date: Date | string, base: Date = new Date())
   const diffHours = Math.round(diffMs / 3600000)
   const diffDays = Math.round(diffMs / 86400000)
   
-  if (Math.abs(diffMins) < 1) return 'právě teď'
+  if (Math.abs(diffMins) < 1) return tr('právě teď')
   if (Math.abs(diffMins) < 60) {
-    return diffMins > 0 ? `za ${diffMins} min` : `před ${Math.abs(diffMins)} min`
+    return diffMins > 0
+      ? tr('za {n} min', { n: diffMins })
+      : tr('před {n} min', { n: Math.abs(diffMins) })
   }
   if (Math.abs(diffHours) < 24) {
-    return diffHours > 0 ? `za ${diffHours} hod` : `před ${Math.abs(diffHours)} hod`
+    return diffHours > 0
+      ? tr('za {n} hod', { n: diffHours })
+      : tr('před {n} hod', { n: Math.abs(diffHours) })
   }
   if (Math.abs(diffDays) < 30) {
-    return diffDays > 0 ? `za ${diffDays} dnů` : `před ${Math.abs(diffDays)} dny`
+    return diffDays > 0
+      ? tr('za {n} dnů', { n: diffDays })
+      : tr('před {n} dny', { n: Math.abs(diffDays) })
   }
   
   return formatDisplayDate(d)

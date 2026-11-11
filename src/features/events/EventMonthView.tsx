@@ -2,6 +2,8 @@
 
 import { createMemo, For, Show } from 'solid-js'
 import { formatDisplayTime } from '../../lib/date-filters'
+import { getLocale } from '../../lib/prefs'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 import type { Event } from '../../lib/api'
 
@@ -74,7 +76,7 @@ export default function EventMonthView(props: EventMonthViewProps) {
   }
 
   const monthLabel = () =>
-    props.month.toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' })
+    props.month.toLocaleDateString(getLocale(), { month: 'long', year: 'numeric' })
 
   return (
     <div class="bg-elevated rounded-xl border border-border overflow-hidden">
@@ -84,7 +86,7 @@ export default function EventMonthView(props: EventMonthViewProps) {
             type="button"
             class="header-btn p-1.5 rounded-md hover:bg-100"
             onClick={() => shiftMonth(-1)}
-            aria-label="Předchozí měsíc"
+            aria-label={tr('Předchozí měsíc')}
           >
             <span class="icon" innerHTML={ICONS['chevronLeft']} />
           </button>
@@ -92,7 +94,7 @@ export default function EventMonthView(props: EventMonthViewProps) {
             type="button"
             class="header-btn p-1.5 rounded-md hover:bg-100"
             onClick={() => shiftMonth(1)}
-            aria-label="Následující měsíc"
+            aria-label={tr('Následující měsíc')}
           >
             <span class="icon" innerHTML={ICONS['chevronRight']} />
           </button>
@@ -105,14 +107,14 @@ export default function EventMonthView(props: EventMonthViewProps) {
           class="btn btn-secondary btn-sm"
           onClick={() => props.onMonthChange(new Date(today.getFullYear(), today.getMonth(), 1))}
         >
-          Dnes
+          {tr('Dnes')}
         </button>
       </div>
 
       <div class="grid grid-cols-7 border-b border-border bg-50">
         <For each={WEEKDAYS}>
           {day => (
-            <div class="px-1 py-1.5 text-center text-xs font-medium text-muted">{day}</div>
+            <div class="px-1 py-1.5 text-center text-xs font-medium text-muted">{tr(day)}</div>
           )}
         </For>
       </div>
@@ -146,7 +148,7 @@ export default function EventMonthView(props: EventMonthViewProps) {
                       return (
                         <button
                           type="button"
-                          class="flex items-baseline gap-1 w-full overflow-hidden text-left text-[11px] leading-tight px-1 py-0.5 rounded-sm transition-opacity hover:opacity-80"
+                          class="flex items-baseline gap-1 w-full overflow-hidden type-badge text-left text-[11px] leading-tight px-1 py-0.5 rounded-sm transition-opacity hover:opacity-80"
                           style={`background-color: var(--color-${color()}-light); color: var(--color-${color()})`}
                           title={`${formatDisplayTime(event.startTime)} ${event.caption}`}
                           onClick={() => props.onOpen(event.id)}
@@ -160,7 +162,7 @@ export default function EventMonthView(props: EventMonthViewProps) {
 
                   <Show when={dayEvents().length > MAX_PILLS}>
                     <p class="text-[11px] text-muted px-1">
-                      +{dayEvents().length - MAX_PILLS} další
+                      {tr('+{n} další', { n: dayEvents().length - MAX_PILLS })}
                     </p>
                   </Show>
                 </div>

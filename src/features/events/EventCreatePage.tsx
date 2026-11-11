@@ -13,6 +13,7 @@ import {
 } from '../../lib/api'
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { formatApiDate } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
 
@@ -102,11 +103,11 @@ export default function EventCreatePage() {
 
   const validate = (): boolean => {
     const next: Record<string, string> = {}
-    if (!caption().trim()) next['caption'] = 'Název události je povinný'
-    if (!startTime()) next['startTime'] = 'Čas začátku je povinný'
-    if (!endTime()) next['endTime'] = 'Čas konce je povinný'
-    if (startTime() && endTime() && startTime() >= endTime()) next['endTime'] = 'Konec musí být po začátku'
-    if (!closeTime()) next['closeTime'] = 'Uzavření přihlášek je povinné'
+    if (!caption().trim()) next['caption'] = tr('Název události je povinný')
+    if (!startTime()) next['startTime'] = tr('Čas začátku je povinný')
+    if (!endTime()) next['endTime'] = tr('Čas konce je povinný')
+    if (startTime() && endTime() && startTime() >= endTime()) next['endTime'] = tr('Konec musí být po začátku')
+    if (!closeTime()) next['closeTime'] = tr('Uzavření přihlášek je povinné')
     setErrors(next)
     return Object.keys(next).length === 0
   }
@@ -172,22 +173,22 @@ export default function EventCreatePage() {
             {isEdit() ? tEvents('editEvent') : tEvents('createEvent')}
           </h1>
           <p class="text-muted mt-1">
-            {isEdit() ? 'Upravit existující událost' : 'Vytvořit novou událost pro tým'}
+            {isEdit() ? tr('Upravit existující událost') : tr('Vytvořit novou událost pro tým')}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} class="space-y-6">
           <fieldset class="bg-elevated rounded-xl border border-border p-5 space-y-4">
-            <legend class="text-lg font-semibold text-text mb-2">Základní informace</legend>
+            <legend class="text-lg font-semibold text-text mb-2">{tr('Základní informace')}</legend>
 
             <div>
-              <label class="label">Název události <span class="text-danger">*</span></label>
+              <label class="label">{tr('Název události')} <span class="text-danger">*</span></label>
               <input
                 class="input w-full mt-1"
                 classList={{ 'border-danger': !!errors()['caption'] }}
                 value={caption()}
                 onInput={e => setCaption(e.currentTarget.value)}
-                placeholder="Např. Trénink, Zápas, Schůze…"
+                placeholder={tr('Např. Trénink, Zápas, Schůze…')}
                 required
                 disabled={isSubmitting()}
               />
@@ -197,7 +198,7 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label class="label">Typ události</label>
+              <label class="label">{tr('Typ události')}</label>
               <select
                 class="input w-full mt-1"
                 value={type()}
@@ -211,29 +212,29 @@ export default function EventCreatePage() {
             </div>
 
             <div>
-              <label class="label">Popis</label>
+              <label class="label">{tr('Popis')}</label>
               <textarea
                 class="input w-full mt-1 min-h-[100px] resize-y"
                 value={description()}
                 onInput={e => setDescription(e.currentTarget.value)}
-                placeholder="Podrobnosti o události…"
+                placeholder={tr('Podrobnosti o události…')}
                 disabled={isSubmitting()}
               />
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label class="label">Místo</label>
+                <label class="label">{tr('Místo')}</label>
                 <input
                   class="input w-full mt-1"
                   value={place()}
                   onInput={e => setPlace(e.currentTarget.value)}
-                  placeholder="Hřiště, adresa…"
+                  placeholder={tr('Hřiště, adresa…')}
                   disabled={isSubmitting()}
                 />
               </div>
               <div>
-                <label class="label">Odkaz</label>
+                <label class="label">{tr('Odkaz')}</label>
                 <input
                   type="url"
                   class="input w-full mt-1"
@@ -247,7 +248,7 @@ export default function EventCreatePage() {
           </fieldset>
 
           <fieldset class="bg-elevated rounded-xl border border-border p-5 space-y-4">
-            <legend class="text-lg font-semibold text-text mb-2">Datum a čas</legend>
+            <legend class="text-lg font-semibold text-text mb-2">{tr('Datum a čas')}</legend>
 
             <div class="flex flex-wrap gap-2">
               <For each={quickDates}>
@@ -258,7 +259,7 @@ export default function EventCreatePage() {
                     onClick={() => applyQuickDate(q.days)}
                     disabled={isSubmitting()}
                   >
-                    {q.label}
+                    {tr(q.label)}
                   </button>
                 )}
               </For>
@@ -266,7 +267,7 @@ export default function EventCreatePage() {
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label class="label">Začátek <span class="text-danger">*</span></label>
+                <label class="label">{tr('Začátek')} <span class="text-danger">*</span></label>
                 <input
                   type="datetime-local"
                   class="input w-full mt-1"
@@ -282,7 +283,7 @@ export default function EventCreatePage() {
               </div>
 
               <div>
-                <label class="label">Konec <span class="text-danger">*</span></label>
+                <label class="label">{tr('Konec')} <span class="text-danger">*</span></label>
                 <input
                   type="datetime-local"
                   class="input w-full mt-1"
@@ -298,7 +299,7 @@ export default function EventCreatePage() {
               </div>
 
               <div>
-                <label class="label">Uzávěrka přihlášek <span class="text-danger">*</span></label>
+                <label class="label">{tr('Uzávěrka přihlášek')} <span class="text-danger">*</span></label>
                 <input
                   type="datetime-local"
                   class="input w-full mt-1"

@@ -6,6 +6,7 @@ import { initAuth, revalidateSession, useIsAuthenticated, useIsLoading } from '.
 import { loadCaptions } from './lib/captions'
 import { initPWA, setDeferredPrompt } from './lib/pwa'
 import { ICONS } from './lib/icons'
+import { tr } from './lib/i18n'
 import Layout from './features/layout/Layout'
 import LoginPage from './features/auth/LoginPage'
 import TeamPage from './features/auth/TeamPage'
@@ -62,7 +63,7 @@ interface BeforeInstallPromptEvent extends Event {
 function Splash() {
   return (
     <div class="min-h-dvh flex items-center justify-center">
-      <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} aria-label="Načítání" />
+      <span class="icon icon-lg text-muted animate-spin" innerHTML={ICONS['spinner']} aria-label={tr('Načítání')} />
     </div>
   )
 }

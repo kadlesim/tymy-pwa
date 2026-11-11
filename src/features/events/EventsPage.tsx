@@ -15,6 +15,7 @@ import {
 } from '../../lib/api'
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { useAuth } from '../../lib/auth'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
@@ -229,11 +230,11 @@ export default function EventsPage() {
           <div class="flex items-center gap-2">
             <A href="/events/manage" class="btn btn-secondary">
               <span class="icon-sm" innerHTML={ICONS['settings']} />
-              Správa
+              {tr('Správa')}
             </A>
             <A href="/events/create" class="btn btn-primary">
               <span class="icon-sm" innerHTML={ICONS['plus']} />
-              Nová událost
+              {tr('Nová událost')}
             </A>
           </div>
         </div>
@@ -242,7 +243,7 @@ export default function EventsPage() {
           <div class="flex gap-1 bg-100 rounded-lg p-1" role="tablist">
             <For each={[
               { value: 'upcoming' as EventTab, label: tEvents('upcoming') },
-              { value: 'pending' as EventTab, label: 'Nevyplněná docházka' },
+              { value: 'pending' as EventTab, label: tr('Nevyplněná docházka') },
               { value: 'past' as EventTab, label: tEvents('past') }
             ]}>
               {(item) => (
@@ -251,7 +252,7 @@ export default function EventsPage() {
                   aria-selected={tab() === item.value}
                   class="px-3 py-1.5 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1.5"
                   classList={{
-                    'bg-white text-primary shadow-sm': tab() === item.value,
+                    'bg-elevated text-primary shadow-sm': tab() === item.value,
                     'text-text-secondary hover:text-text': tab() !== item.value
                   }}
                   onClick={() => setTab(item.value)}
@@ -273,32 +274,34 @@ export default function EventsPage() {
             </For>
           </div>
 
-          <div class="flex gap-1 bg-100 rounded-lg p-1" role="group" aria-label="Zobrazení">
+          <div class="flex gap-1 bg-100 rounded-lg p-1" role="group" aria-label={tr('Zobrazení')}>
             <button
               type="button"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              class="inline-flex items-center justify-center w-10 h-10 rounded-md transition-colors"
               classList={{
                 'bg-primary text-white shadow-sm': view() === 'list',
                 'text-text-secondary hover:text-text hover:bg-200': view() !== 'list'
               }}
               aria-pressed={view() === 'list'}
+              aria-label={tr('Seznam')}
+              title={tr('Seznam')}
               onClick={() => setView('list')}
             >
-              <span class="icon" innerHTML={ICONS['list']} />
-              Seznam
+              <span class="icon-md" innerHTML={ICONS['list']} />
             </button>
             <button
               type="button"
-              class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              class="inline-flex items-center justify-center w-10 h-10 rounded-md transition-colors"
               classList={{
                 'bg-primary text-white shadow-sm': view() === 'month',
                 'text-text-secondary hover:text-text hover:bg-200': view() !== 'month'
               }}
               aria-pressed={view() === 'month'}
+              aria-label={tr('Kalendář')}
+              title={tr('Kalendář')}
               onClick={() => setView('month')}
             >
-              <span class="icon" innerHTML={ICONS['calendar']} />
-              Kalendář
+              <span class="icon-md" innerHTML={ICONS['calendar']} />
             </button>
           </div>
 
@@ -307,8 +310,9 @@ export default function EventsPage() {
             style="width: auto"
             value={selectedType()}
             onChange={e => setSelectedType(e.currentTarget.value)}
+            aria-label={tr('Typ události')}
           >
-            <option value="all">Všechny typy</option>
+            <option value="all">{tr('Všechny typy')}</option>
             <For each={eventTypes()}>
               {(type) => <option value={type.code}>{type.caption}</option>}
             </For>
@@ -350,7 +354,7 @@ export default function EventsPage() {
             when={!failed()}
             fallback={
               <div class="text-center p-8">
-                <p class="text-danger mb-4">Chyba při načítání událostí.</p>
+                <p class="text-danger mb-4">{tr('Chyba při načítání událostí.')}</p>
                 <button class="btn btn-primary" onClick={() => eventsQuery.refetch()}>
                   {tCommon('retry')}
                 </button>
@@ -362,17 +366,17 @@ export default function EventsPage() {
               fallback={
                 <div class="text-center py-12">
                   <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['calendar']} />
-                  <h3 class="text-lg font-medium text-text mb-1">Žádné události</h3>
+                  <h3 class="text-lg font-medium text-text mb-1">{tr('Žádné události')}</h3>
                   <p class="text-muted">
                     {tab() === 'upcoming'
-                      ? 'Zatím nejsou naplánované žádné události.'
+                      ? tr('Zatím nejsou naplánované žádné události.')
                       : tab() === 'past'
-                        ? 'Zatím nejsou žádné minulé události.'
-                        : 'Máte vyplněnou docházku na všechny otevřené události.'}
+                        ? tr('Zatím nejsou žádné minulé události.')
+                        : tr('Máte vyplněnou docházku na všechny otevřené události.')}
                   </p>
                   <Show when={tab() === 'upcoming'}>
                     <button class="btn btn-secondary mt-4" onClick={() => setTab('past')}>
-                      Zobrazit minulé události
+                      {tr('Zobrazit minulé události')}
                     </button>
                   </Show>
                 </div>
@@ -468,7 +472,7 @@ function EventCard(props: EventCardProps) {
             <Show when={canRsvp()}>
               <div class="mt-3 pt-3 border-t border-border-light" onClick={e => e.stopPropagation()}>
                 <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs text-muted">Účast:</span>
+                  <span class="text-xs text-muted">{tr('Účast:')}</span>
                   <For each={props.statusOptions}>
                     {(option) => {
                       const selected = () => myStatus() === option.code
@@ -499,7 +503,7 @@ function EventCard(props: EventCardProps) {
 
             <Show when={!canRsvp() && myStatus()}>
               <div class="mt-3 pt-3 border-t border-border-light text-xs text-muted">
-                Vaše účast:{' '}
+                {tr('Vaše účast:')}{' '}
                 <span class="badge bg-100 text-text-secondary">
                   {STATUS_LABELS[myStatus()!] || myStatus()}
                 </span>

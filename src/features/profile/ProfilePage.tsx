@@ -8,6 +8,7 @@ import { apiAssetUrl } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useAuth } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function ProfilePage() {
@@ -118,7 +119,7 @@ export default function ProfilePage() {
                 onClick={() => avatarBase64() && avatarMutation.mutate(avatarBase64()!)}
                 disabled={avatarMutation.isPending}
               >
-                {avatarMutation.isPending ? 'Nahrávání…' : 'Uložit avatar'}
+                {avatarMutation.isPending ? tr('Nahrávání…') : tr('Uložit avatar')}
               </button>
             </Show>
           </div>
@@ -145,7 +146,7 @@ export default function ProfilePage() {
                   onClick={() => saveMutation.mutate(form())}
                   disabled={saveMutation.isPending}
                 >
-                  {saveMutation.isPending ? 'Ukládání…' : tCommon('save')}
+                  {saveMutation.isPending ? tr('Ukládání…') : tCommon('save')}
                 </button>
               </Show>
             </div>
@@ -155,50 +156,50 @@ export default function ProfilePage() {
             when={editing()}
             fallback={
               <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                <div><dt class="text-muted">Jméno</dt><dd class="font-medium text-text">{userQuery.data!.firstName || '—'}</dd></div>
-                <div><dt class="text-muted">Příjmení</dt><dd class="font-medium text-text">{userQuery.data!.lastName || '—'}</dd></div>
-                <div><dt class="text-muted">E-mail</dt><dd class="font-medium text-text">{userQuery.data!.email || '—'}</dd></div>
-                <div><dt class="text-muted">Telefon</dt><dd class="font-medium text-text">{userQuery.data!.phone || '—'}</dd></div>
-                <div><dt class="text-muted">Číslo dresu</dt><dd class="font-medium text-text">{userQuery.data!.jerseyNumber || '—'}</dd></div>
-                <div><dt class="text-muted">Jazyk</dt><dd class="font-medium text-text">{userQuery.data!.language === 'CZ' ? 'Čeština' : 'English'}</dd></div>
+                <div><dt class="text-muted">{tr('Jméno')}</dt><dd class="font-medium text-text">{userQuery.data!.firstName || '—'}</dd></div>
+                <div><dt class="text-muted">{tr('Příjmení')}</dt><dd class="font-medium text-text">{userQuery.data!.lastName || '—'}</dd></div>
+                <div><dt class="text-muted">{tr('E-mail')}</dt><dd class="font-medium text-text">{userQuery.data!.email || '—'}</dd></div>
+                <div><dt class="text-muted">{tr('Telefon')}</dt><dd class="font-medium text-text">{userQuery.data!.phone || '—'}</dd></div>
+                <div><dt class="text-muted">{tr('Číslo dresu')}</dt><dd class="font-medium text-text">{userQuery.data!.jerseyNumber || '—'}</dd></div>
+                <div><dt class="text-muted">{tr('Jazyk')}</dt><dd class="font-medium text-text">{userQuery.data!.language === 'CZ' ? tr('Čeština') : tr('Angličtina')}</dd></div>
               </dl>
             }
           >
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label class="label">Jméno</label>
+                <label class="label">{tr('Jméno')}</label>
                 <input class="input w-full mt-1" value={field('firstName') ?? ''} onInput={e => setField('firstName', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Příjmení</label>
+                <label class="label">{tr('Příjmení')}</label>
                 <input class="input w-full mt-1" value={field('lastName') ?? ''} onInput={e => setField('lastName', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Zobrazované jméno</label>
+                <label class="label">{tr('Zobrazované jméno')}</label>
                 <input class="input w-full mt-1" value={field('callName') ?? ''} onInput={e => setField('callName', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">E-mail</label>
+                <label class="label">{tr('E-mail')}</label>
                 <input type="email" class="input w-full mt-1" value={field('email') ?? ''} onInput={e => setField('email', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Telefon</label>
+                <label class="label">{tr('Telefon')}</label>
                 <input class="input w-full mt-1" value={field('phone') ?? ''} onInput={e => setField('phone', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Číslo dresu</label>
+                <label class="label">{tr('Číslo dresu')}</label>
                 <input class="input w-full mt-1" value={field('jerseyNumber') ?? ''} onInput={e => setField('jerseyNumber', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Ulice</label>
+                <label class="label">{tr('Ulice')}</label>
                 <input class="input w-full mt-1" value={field('street') ?? ''} onInput={e => setField('street', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">Město</label>
+                <label class="label">{tr('Město')}</label>
                 <input class="input w-full mt-1" value={field('city') ?? ''} onInput={e => setField('city', e.currentTarget.value)} />
               </div>
               <div>
-                <label class="label">PSČ</label>
+                <label class="label">{tr('PSČ')}</label>
                 <input class="input w-full mt-1" value={field('zipCode') ?? ''} onInput={e => setField('zipCode', e.currentTarget.value)} />
               </div>
             </div>
@@ -206,7 +207,7 @@ export default function ProfilePage() {
         </div>
 
         <button class="btn btn-secondary w-full" onClick={() => navigate('/profile/settings')}>
-          Nastavení aplikace
+          {tr('Nastavení aplikace')}
         </button>
       </div>
     </Show>

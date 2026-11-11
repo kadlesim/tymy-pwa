@@ -4,6 +4,7 @@ import { createSignal } from 'solid-js'
 import { useNavigate } from '@solidjs/router'
 import { doRequestPasswordReset } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../layout/Layout'
 
 export default function ForgotPasswordPage() {
@@ -21,13 +22,13 @@ export default function ForgotPasswordPage() {
     setIsLoading(true)
     
     if (!email().trim()) {
-      setError('E-mail je povinný')
+      setError(tr('E-mail je povinný'))
       setIsLoading(false)
       return
     }
     
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email())) {
-      setError('Neplatný formát e-mailu')
+      setError(tr('Neplatný formát e-mailu'))
       setIsLoading(false)
       return
     }
@@ -37,8 +38,6 @@ export default function ForgotPasswordPage() {
       const hostname = window.location.hostname
       
       await doRequestPasswordReset(email(), callbackUri, hostname)
-      
-      setSuccess(true)
       
       setSuccess(true)
     } catch (err: any) {
@@ -53,11 +52,11 @@ export default function ForgotPasswordPage() {
       <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up">
         <div class="text-center mb-6">
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-warning-light text-warning mb-4">
-            <span class="icon text-2xl">🔑</span>
+            <span class="icon icon-lg" innerHTML={ICONS['lock']} />
           </div>
-          <h1 class="text-2xl font-bold text-text">Zapomenuté heslo</h1>
+          <h1 class="text-2xl font-bold text-text">{tr('Zapomenuté heslo')}</h1>
           <p class="text-muted mt-1">
-            Zadejte svůj e-mail a pošleme vám odkaz pro nastavení nového hesla
+            {tr('Zadejte svůj e-mail a pošleme vám odkaz pro nastavení nového hesla')}
           </p>
         </div>
         
@@ -72,16 +71,15 @@ export default function ForgotPasswordPage() {
             <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light text-success mb-4">
               <span class="icon icon-lg" innerHTML={ICONS['check']} />
             </div>
-            <h2 class="text-xl font-semibold text-text mb-2">E-mail odeslán</h2>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('E-mail odeslán')}</h2>
             <p class="text-muted mb-6">
-              Pokud je e-mail v našem systému, obdržíte odkaz pro reset hesla.
-              Odkaz platí 1 hodinu.
+              {tr('Pokud je e-mail v našem systému, obdržíte odkaz pro reset hesla. Odkaz platí 1 hodinu.')}
             </p>
             <button
               class="btn btn-primary w-full"
               onClick={() => navigate('/login')}
             >
-              Zpět k přihlášení
+              {tr('Zpět k přihlášení')}
             </button>
           </div>
         ) : (
@@ -112,7 +110,7 @@ export default function ForgotPasswordPage() {
                   {tCommon('loading')}
                 </span>
               ) : (
-                'Poslat odkaz pro reset'
+                tr('Poslat odkaz pro reset')
               )}
             </button>
           </form>
@@ -123,7 +121,7 @@ export default function ForgotPasswordPage() {
             class="text-primary hover:underline font-medium"
             onClick={() => navigate('/login')}
           >
-            Zpět k přihlášení
+            {tr('Zpět k přihlášení')}
           </button>
         </p>
       </div>

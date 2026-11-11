@@ -3,6 +3,8 @@
 import { createSignal, For, Show } from 'solid-js'
 import { doLogout } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
+import { theme, setTheme, textSize, setTextSize, lang, setLang } from '../../lib/prefs'
 
 type Section = 'notifications' | 'privacy' | 'appearance' | 'account'
 
@@ -30,7 +32,7 @@ export default function SettingsPage() {
   const [section, setSection] = createSignal<Section>('notifications')
 
   const handleLogout = async () => {
-    if (confirm('Opravdu se chcete odhlásit?')) {
+    if (confirm(tr('Opravdu se chcete odhlásit?'))) {
       await doLogout()
     }
   }
@@ -53,7 +55,7 @@ export default function SettingsPage() {
                     }}
                     onClick={() => setSection(s.id)}
                   >
-                    {s.label}
+                    {tr(s.label)}
                   </button>
                 </li>
               )}
@@ -63,50 +65,100 @@ export default function SettingsPage() {
 
         <div class="flex-1 bg-elevated rounded-xl border border-border p-6">
           <Show when={section() === 'notifications'}>
-            <h2 class="text-lg font-semibold text-text mb-4">Notifikace</h2>
+            <h2 class="text-lg font-semibold text-text mb-4">{tr('Notifikace')}</h2>
             <div class="space-y-3 text-sm">
               <label class="flex items-center justify-between">
-                <span class="text-text">Push notifikace pro nové zprávy</span>
+                <span class="text-text">{tr('Push notifikace pro nové zprávy')}</span>
                 <Toggle />
               </label>
               <label class="flex items-center justify-between">
-                <span class="text-text">Nové události a změny účastí</span>
+                <span class="text-text">{tr('Nové události a změny účastí')}</span>
                 <Toggle />
               </label>
               <label class="flex items-center justify-between">
-                <span class="text-text">Připomínky událostí</span>
+                <span class="text-text">{tr('Připomínky událostí')}</span>
                 <Toggle default={false} />
               </label>
             </div>
           </Show>
 
           <Show when={section() === 'privacy'}>
-            <h2 class="text-lg font-semibold text-text mb-4">Soukromí</h2>
+            <h2 class="text-lg font-semibold text-text mb-4">{tr('Soukromí')}</h2>
             <div class="space-y-3 text-sm">
               <label class="flex items-center justify-between">
-                <span class="text-text">Profil viditelný pro členy týmu</span>
+                <span class="text-text">{tr('Profil viditelný pro členy týmu')}</span>
                 <Toggle />
               </label>
               <label class="flex items-center justify-between">
-                <span class="text-text">Zobrazit moji účast na událostech</span>
+                <span class="text-text">{tr('Zobrazit moji účast na událostech')}</span>
                 <Toggle />
               </label>
             </div>
           </Show>
 
           <Show when={section() === 'appearance'}>
-            <h2 class="text-lg font-semibold text-text mb-4">Vzhled</h2>
-            <label class="label">Jazyk</label>
-            <select class="input w-full max-w-xs mt-1">
-              <option value="CZ">Čeština</option>
-              <option value="EN">English</option>
-            </select>
+            <h2 class="text-lg font-semibold text-text mb-4">{tr('Vzhled')}</h2>
+            <div class="space-y-4 text-sm">
+              <div>
+                <label class="label">{tr('Jazyk')}</label>
+                <select
+                  class="input w-full max-w-xs mt-1"
+                  value={lang()}
+                  onChange={e => setLang(e.currentTarget.value === 'en' ? 'en' : 'cs')}
+                >
+                  <option value="cs">{tr('Čeština')}</option>
+                  <option value="en">{tr('Angličtina')}</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">{tr('Vzhled')}</label>
+                <div class="flex gap-2 mt-1">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    classList={{ 'bg-primary-light text-primary': theme() === 'light' }}
+                    onClick={() => setTheme('light')}
+                  >
+                    {tr('Světlý')}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    classList={{ 'bg-primary-light text-primary': theme() === 'dark' }}
+                    onClick={() => setTheme('dark')}
+                  >
+                    {tr('Tmavý')}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="label">{tr('Velikost textu')}</label>
+                <div class="flex gap-2 mt-1">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    classList={{ 'bg-primary-light text-primary': textSize() === 'normal' }}
+                    onClick={() => setTextSize('normal')}
+                  >
+                    {tr('Menší text')}
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    classList={{ 'bg-primary-light text-primary': textSize() === 'large' }}
+                    onClick={() => setTextSize('large')}
+                  >
+                    {tr('Větší text')}
+                  </button>
+                </div>
+              </div>
+            </div>
           </Show>
 
           <Show when={section() === 'account'}>
-            <h2 class="text-lg font-semibold text-text mb-4">Účet</h2>
+            <h2 class="text-lg font-semibold text-text mb-4">{tr('Účet')}</h2>
             <div class="space-y-3">
-              <button class="btn btn-secondary w-full justify-start">Změnit heslo</button>
+              <button class="btn btn-secondary w-full justify-start">{tr('Změnit heslo')}</button>
               <button class="btn btn-danger w-full justify-start" onClick={handleLogout}>
                 {tAuth('logout')}
               </button>

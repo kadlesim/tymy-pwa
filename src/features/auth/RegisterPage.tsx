@@ -4,6 +4,7 @@ import { createSignal } from 'solid-js'
 import { useNavigate } from '@solidjs/router'
 import { doRegister } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../layout/Layout'
 
 interface RegisterFormData {
@@ -51,31 +52,31 @@ export default function RegisterPage() {
     const data = formData() as unknown as Record<string, string>
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['login']?.trim()) newErrors.login = 'Přihlašovací jméno je povinné'
+    if (!data['login']?.trim()) newErrors.login = tr('Přihlašovací jméno je povinné')
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    else if (data['login'].length < 3) newErrors.login = 'Minimálně 3 znaky'
+    else if (data['login'].length < 3) newErrors.login = tr('Minimálně 3 znaky')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['password']) newErrors.password = 'Heslo je povinné'
+    if (!data['password']) newErrors.password = tr('Heslo je povinné')
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    else if (data['password'].length < 6) newErrors.password = 'Minimálně 6 znaků'
+    else if (data['password'].length < 6) newErrors.password = tr('Minimálně 6 znaků')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (data['password'] !== data['confirmPassword']) newErrors.confirmPassword = 'Hesla se neshodují'
+    if (data['password'] !== data['confirmPassword']) newErrors.confirmPassword = tr('Hesla se neshodují')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['email']?.trim()) newErrors.email = 'E-mail je povinný'
+    if (!data['email']?.trim()) newErrors.email = tr('E-mail je povinný')
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data['email'])) newErrors.email = 'Neplatný formát e-mailu'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data['email'])) newErrors.email = tr('Neplatný formát e-mailu')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['callName']?.trim()) newErrors.callName = 'Zobrazované jméno je povinné'
+    if (!data['callName']?.trim()) newErrors.callName = tr('Zobrazované jméno je povinné')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['firstName']?.trim()) newErrors.firstName = 'Jméno je povinné'
+    if (!data['firstName']?.trim()) newErrors.firstName = tr('Jméno je povinné')
     
     // @ts-expect-error - TypeScript quirk with bracket notation on Record<string, string>
-    if (!data['lastName']?.trim()) newErrors.lastName = 'Příjmení je povinné'
+    if (!data['lastName']?.trim()) newErrors.lastName = tr('Příjmení je povinné')
     
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
@@ -95,9 +96,9 @@ export default function RegisterPage() {
       setTimeout(() => navigate('/login'), 3000)
     } catch (err: any) {
       if (err.message?.includes('login')) {
-        setErrors({ login: 'Toto přihlašovací jméno je již obsazené' })
+        setErrors({ login: tr('Toto přihlašovací jméno je již obsazené') })
       } else if (err.message?.includes('email')) {
-        setErrors({ email: 'Tento e-mail je již registrovaný' })
+        setErrors({ email: tr('Tento e-mail je již registrovaný') })
       } else {
         setErrors({ form: err.message || tErrors('unknown') })
       }
@@ -113,16 +114,15 @@ export default function RegisterPage() {
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success-light text-success mb-4">
             <span class="icon icon-lg" innerHTML={ICONS['check']} />
           </div>
-          <h1 class="text-2xl font-bold text-text mb-2">Registrace úspěšná</h1>
+          <h1 class="text-2xl font-bold text-text mb-2">{tr('Registrace úspěšná')}</h1>
           <p class="text-muted mb-6">
-            Váš účet byl vytvořen a čeká na schválení administrátorem týmu.
-            Budete upozorněni e-mailem, jakmile bude účet aktivní.
+            {tr('Váš účet byl vytvořen a čeká na schválení administrátorem týmu. Budete upozorněni e-mailem, jakmile bude účet aktivní.')}
           </p>
           <button
             class="btn btn-primary w-full"
             onClick={() => navigate('/login')}
           >
-            Přejít k přihlášení
+            {tr('Přejít k přihlášení')}
           </button>
         </div>
       </div>
@@ -136,8 +136,8 @@ export default function RegisterPage() {
           <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
             <span class="icon text-primary" innerHTML={ICONS['user']} />
           </div>
-          <h1 class="text-2xl font-bold text-text">Registrace</h1>
-          <p class="text-muted mt-1">Vytvořte si účet pro přístup k týmu</p>
+          <h1 class="text-2xl font-bold text-text">{tr('Registrace')}</h1>
+          <p class="text-muted mt-1">{tr('Vytvořte si účet pro přístup k týmu')}</p>
         </div>
         
         {errors()['form'] && (
@@ -156,7 +156,7 @@ export default function RegisterPage() {
                 class={`input w-full mt-1 ${errors()['firstName'] ? 'border-danger' : ''}`}
                 value={formData()['firstName']}
                 onInput={e => updateField('firstName', e.currentTarget.value)}
-                placeholder="Jméno"
+                placeholder={tr('Jméno')}
                 required
                 disabled={isLoading()}
               />
@@ -170,7 +170,7 @@ export default function RegisterPage() {
                 class={`input w-full mt-1 ${errors()['lastName'] ? 'border-danger' : ''}`}
                 value={formData()['lastName']}
                 onInput={e => updateField('lastName', e.currentTarget.value)}
-                placeholder="Příjmení"
+                placeholder={tr('Příjmení')}
                 required
                 disabled={isLoading()}
               />
@@ -186,7 +186,7 @@ export default function RegisterPage() {
               class={`input w-full mt-1 ${errors()['callName'] ? 'border-danger' : ''}`}
               value={formData()['callName']}
               onInput={e => updateField('callName', e.currentTarget.value)}
-              placeholder="Zobrazované jméno (např. Jan N.)"
+              placeholder={tr('Zobrazované jméno (např. Jan N.)')}
               required
               disabled={isLoading()}
             />
@@ -216,7 +216,7 @@ export default function RegisterPage() {
               class={`input w-full mt-1 ${errors()['login'] ? 'border-danger' : ''}`}
               value={formData()['login']}
               onInput={e => updateField('login', e.currentTarget.value)}
-              placeholder="Přihlašovací jméno"
+              placeholder={tr('Přihlašovací jméno')}
               required
               disabled={isLoading()}
             />
@@ -232,7 +232,7 @@ export default function RegisterPage() {
                 class={`input w-full pr-10 ${errors()['password'] ? 'border-danger' : ''}`}
                 value={formData()['password']}
                 onInput={e => updateField('password', e.currentTarget.value)}
-                placeholder="Heslo (min. 6 znaků)"
+                placeholder={tr('Heslo (min. 6 znaků)')}
                 required
                 disabled={isLoading()}
               />
@@ -240,9 +240,9 @@ export default function RegisterPage() {
                 type="button"
                 class="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-text"
                 onClick={() => setShowPassword(!showPassword())}
-                aria-label={showPassword() ? 'Skrýt heslo' : 'Zobrazit heslo'}
+                aria-label={showPassword() ? tr('Skrýt heslo') : tr('Zobrazit heslo')}
               >
-                <span class="icon">👁</span>
+                <span class="icon" innerHTML={ICONS['eye']} />
               </button>
             </div>
             {errors()['password'] && <p class="text-danger text-xs mt-1">{errors()['password']}</p>}
@@ -256,7 +256,7 @@ export default function RegisterPage() {
               class={`input w-full mt-1 ${errors()['confirmPassword'] ? 'border-danger' : ''}`}
               value={formData()['confirmPassword']}
               onInput={e => updateField('confirmPassword', e.currentTarget.value)}
-              placeholder="Potvrzení hesla"
+              placeholder={tr('Potvrzení hesla')}
               required
               disabled={isLoading()}
             />
@@ -264,13 +264,13 @@ export default function RegisterPage() {
           </div>
           
           <div>
-            <label for="note" class="label">Poznámka pro administrátory (volitelné)</label>
+            <label for="note" class="label">{tr('Poznámka pro administrátory (volitelné)')}</label>
             <textarea
               id="note"
               class="input w-full mt-1 min-h-[80px] resize-y"
               value={formData()['note']}
               onInput={e => updateField('note', e.currentTarget.value)}
-              placeholder="Proč chcete do týmu vstoupit..."
+              placeholder={tr('Proč chcete do týmu vstoupit...')}
               disabled={isLoading()}
             />
           </div>
@@ -292,7 +292,7 @@ export default function RegisterPage() {
         </form>
         
         <p class="text-center text-sm text-muted mt-6">
-          Už máte účet?{' '}
+          {tr('Už máte účet?')}{' '}
           <button 
             class="text-primary hover:underline font-medium"
             onClick={() => navigate('/login')}

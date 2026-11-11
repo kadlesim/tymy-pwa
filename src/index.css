@@ -133,21 +133,53 @@
   --safe-area-inset-right: env(safe-area-inset-right, 0);
 }
 
+/* Bigger text: everything sized in rem scales with the root font size; the px-based
+   layout (header, sidebar, container) stays put. */
+html[data-text-size='large'] {
+  font-size: 18px;
+}
+
 /* Dark mode (optional - can be toggled via class) */
 .dark {
-  --color-bg: var(--color-950);
-  --color-bg-elevated: var(--color-900);
-  --color-text: var(--color-50);
-  --color-text-secondary: var(--color-400);
-  --color-text-muted: var(--color-500);
-  --color-border: var(--color-700);
-  --color-border-light: var(--color-800);
-  --color-primary-light: #2d2d2d;
-  --color-secondary-light: #2d2d2d;
+  /* Surfaces and text */
+  --color-bg: #14161a;
+  --color-bg-elevated: #1d2024;
+  --color-text: #e9ecef;
+  --color-text-secondary: #adb5bd;
+  --color-text-muted: #868e96;
+  --color-border: #343a40;
+  --color-border-light: #2b3036;
+
+  /* The neutral scale is remapped: 50–200 are surfaces, 500–900 read as text. */
+  --color-50: #191c20;
+  --color-100: #22262b;
+  --color-200: #2b3036;
+  --color-300: #3a4046;
+  --color-400: #4d545b;
+  --color-500: #868e96;
+  --color-600: #adb5bd;
+  --color-700: #ced4da;
+  --color-800: #e9ecef;
+  --color-900: #f1f3f5;
+  --color-950: #ffffff;
+
+  /* Accent tints */
+  --color-primary-light: #343a40;
+  --color-secondary-light: #2b3036;
   --color-success-light: #14532d;
   --color-warning-light: #713f12;
   --color-danger-light: #7f1d1d;
   --color-info-light: #164e63;
+}
+
+/* Grey accents are too dark to read on the dark surfaces; keep the semantics but
+   lift the foreground. Coloured accents (success/danger/…) are bright enough. */
+.dark .text-primary,
+.dark .bg-primary-light {
+  color: #e9ecef;
+}
+.dark .type-badge {
+  color: #f1f3f5 !important;
 }
 
 /* Reset & Base */

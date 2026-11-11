@@ -13,6 +13,8 @@ import {
 } from '../../lib/api'
 import { STATUS_COLORS, STATUS_LABELS } from '../events/constants'
 import { formatDisplayDate } from '../../lib/date-filters'
+import { getLocale } from '../../lib/prefs'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 const STATUS_SHORT: Record<string, string> = {
@@ -101,12 +103,12 @@ export default function ReportsPage() {
         const summary = record.user
         byId.set(record.userId, {
           id: record.userId,
-          name: summary?.callName || summary?.displayName || `Uživatel ${record.userId}`
+          name: summary?.callName || summary?.displayName || tr('Uživatel {id}', { id: record.userId })
         })
       }
     }
 
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, 'cs'))
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name, getLocale()))
   })
 
   const attendanceFor = (event: Event, userId: number) =>
@@ -130,7 +132,7 @@ export default function ReportsPage() {
       link.remove()
       URL.revokeObjectURL(url)
     } catch (error) {
-      setDownloadError((error as Error).message || 'Export se nezdařil.')
+      setDownloadError((error as Error).message || tr('Export se nezdařil.'))
     } finally {
       setDownloading(false)
     }
@@ -141,10 +143,10 @@ export default function ReportsPage() {
   return (
     <div class="reports-page">
       <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 class="text-xl font-semibold text-text">Reporty</h1>
+        <h1 class="text-xl font-semibold text-text">{tr('Reporty')}</h1>
         <div class="flex items-center gap-2">
           <label class="label mb-0" for="report-year">
-            Rok
+            {tr('Rok')}
           </label>
           <select
             id="report-year"
@@ -161,10 +163,10 @@ export default function ReportsPage() {
             class="btn btn-secondary"
             onClick={handleDownload}
             disabled={downloading()}
-            title="Stáhnout oficiální report jako XLSX"
+            title={tr('Stáhnout oficiální report jako XLSX')}
           >
             <span class="icon-sm" innerHTML={ICONS['download']} />
-            {downloading() ? 'Stahuji…' : 'XLSX'}
+            {downloading() ? tr('Stahuji…') : 'XLSX'}
           </button>
         </div>
       </div>
@@ -174,8 +176,8 @@ export default function ReportsPage() {
       </Show>
 
       <p class="text-sm text-muted mb-3">
-        Plánovaná a skutečná účast na událostech roku {year()}.
-        <span class="ml-1">✓ přijdu · ✕ nepřijdu · ~ později · ? nevím</span>
+        {tr('Plánovaná a skutečná účast na událostech roku {year}.', { year: year() })}
+        <span class="ml-1">{tr('✓ přijdu · ✕ nepřijdu · ~ později · ? nevím')}</span>
       </p>
 
       <Show
@@ -191,11 +193,13 @@ export default function ReportsPage() {
           fallback={
             <div class="text-center py-12">
               <span class="icon icon-lg text-muted mb-3" innerHTML={ICONS['reports']} />
-              <h3 class="text-lg font-medium text-text mb-1">Žádná data pro rok {year()}</h3>
+              <h3 class="text-lg font-medium text-text mb-1">
+                {tr('Žádná data pro rok {year}', { year: year() })}
+              </h3>
               <p class="text-muted">
                 {events().length === 0
-                  ? 'V tomto roce nejsou žádné události.'
-                  : 'V týmu nejsou žádní aktivní hráči.'}
+                  ? tr('V tomto roce nejsou žádné události.')
+                  : tr('V týmu nejsou žádní aktivní hráči.')}
               </p>
             </div>
           }
@@ -206,7 +210,7 @@ export default function ReportsPage() {
                 <thead>
                   <tr class="bg-50">
                     <th class="sticky left-0 z-10 bg-50 text-left px-3 py-2 font-medium text-text whitespace-nowrap border-b border-border">
-                      Hráč
+                      {tr('Hráč')}
                     </th>
                     <For each={usedEvents()}>
                       {event => (
@@ -243,14 +247,14 @@ export default function ReportsPage() {
                                     <span
                                       class="block text-xs"
                                       style={`color: ${statusColor(record?.preStatus)}`}
-                                      title={`Plán: ${statusLabel(record?.preStatus)}`}
+                                      title={`${tr('Plán:')} ${statusLabel(record?.preStatus)}`}
                                     >
                                       {shortStatus(record?.preStatus) || '·'}
                                     </span>
                                     <span
                                       class="block text-[11px] opacity-60"
                                       style={`color: ${statusColor(record?.postStatus)}`}
-                                      title={`Výsledek: ${statusLabel(record?.postStatus)}`}
+                                      title={`${tr('Výsledek:')} ${statusLabel(record?.postStatus)}`}
                                     >
                                       {shortStatus(record?.postStatus) || '·'}
                                     </span>
@@ -267,7 +271,10 @@ export default function ReportsPage() {
               </table>
             </div>
             <p class="px-3 py-2 text-xs text-muted border-t border-border-light">
-              {usedEvents().length} událostí · {players().length} hráčů
+              {tr('{events} událostí · {players} hráčů', {
+                events: usedEvents().length,
+                players: players().length
+              })}
             </p>
           </div>
         </Show>

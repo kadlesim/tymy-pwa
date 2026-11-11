@@ -4,9 +4,11 @@
 
 import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
+import { tr } from '../../lib/i18n'
 import { apiAssetUrl } from '../../lib/api'
 import { STATUS_COLORS, STATUS_LABELS } from './constants'
 import { formatDisplayDateTime } from '../../lib/date-filters'
+import { getLocale } from '../../lib/prefs'
 
 export interface AttendanceItem {
   userId: number
@@ -55,7 +57,7 @@ interface Group {
 }
 
 const displayNameOf = (item: AttendanceItem): string =>
-  item.user?.displayName || item.user?.callName || item.user?.login || `Uživatel ${item.userId}`
+  item.user?.displayName || item.user?.callName || item.user?.login || tr('Uživatel {id}', { id: item.userId })
 
 const isActivePlayer = (item: AttendanceItem): boolean => item.user?.status === 'PLAYER'
 
@@ -84,13 +86,13 @@ export default function EventAttendance(props: EventAttendanceProps) {
 
     const withoutStatus: Group = {
       code: null,
-      label: 'Bez odpovědi',
+      label: tr('Bez odpovědi'),
       color: 'secondary',
       items: []
     }
 
     for (const [code, items] of byStatus) {
-      const sorted = [...items].sort((a, b) => displayNameOf(a).localeCompare(displayNameOf(b), 'cs'))
+      const sorted = [...items].sort((a, b) => displayNameOf(a).localeCompare(displayNameOf(b), getLocale()))
       const group = code ? order.find(g => g.code === code) : undefined
       if (group) group.items = sorted
       else if (!code) withoutStatus.items = sorted
@@ -108,10 +110,10 @@ export default function EventAttendance(props: EventAttendanceProps) {
         <div class="p-4 border-b border-border flex items-center justify-between gap-2">
           <h2 class="text-lg font-semibold text-text flex items-center gap-2">
             <span class="icon" innerHTML={ICONS['users']} />
-            Účast ({total()})
+            {tr('Účast ({n})', { n: total() })}
           </h2>
           <button class="btn btn-secondary text-sm" onClick={props.onToggleHistory}>
-            {props.showHistory ? 'Skrýt historii' : 'Historie změn'}
+            {props.showHistory ? tr('Skrýt historii') : tr('Historie změn')}
           </button>
         </div>
 
@@ -172,13 +174,13 @@ export default function EventAttendance(props: EventAttendanceProps) {
 
         <Show when={props.showHistory && props.history.length > 0}>
           <div class="event-history p-4 bg-50 border-t border-border">
-            <h3 class="text-sm font-medium text-text mb-3">Historie změn účastí</h3>
+            <h3 class="text-sm font-medium text-text mb-3">{tr('Historie změn účastí')}</h3>
             <div class="space-y-2 max-h-64 overflow-y-auto">
               <For each={props.history}>
                 {(h) => (
                   <div class="history-item text-sm p-2 bg-elevated rounded">
                     <div class="flex items-center gap-2 text-muted mb-1">
-                      <span class="font-medium text-text">{h.user?.displayName || h.user?.callName || 'Neznámý'}</span>
+                      <span class="font-medium text-text">{h.user?.displayName || h.user?.callName || tr('Neznámý')}</span>
                       <span>•</span>
                       <span>{formatDisplayDateTime(h.updatedAt)}</span>
                     </div>

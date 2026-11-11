@@ -7,6 +7,7 @@ import { getUser, type User } from '../../lib/api'
 import { apiAssetUrl } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function UserDetailPage() {
@@ -38,8 +39,8 @@ export default function UserDetailPage() {
         when={userQuery.data}
         fallback={
           <div class="text-center p-8">
-            <h2 class="text-xl font-semibold text-text mb-2">Uživatel nenalezen</h2>
-            <button class="btn btn-primary" onClick={() => navigate('/users')}>Zpět k týmu</button>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('Uživatel nenalezen')}</h2>
+            <button class="btn btn-primary" onClick={() => navigate('/users')}>{tr('Zpět k týmu')}</button>
           </div>
         }
       >
@@ -72,41 +73,41 @@ export default function UserDetailPage() {
             <section class="bg-elevated rounded-xl border border-border p-6">
               <h2 class="text-lg font-semibold text-text mb-4 flex items-center gap-2">
                 <span class="icon" innerHTML={ICONS['user']} />
-                Osobní údaje
+                {tr('Osobní údaje')}
               </h2>
               <dl class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <dt class="text-muted">Jméno</dt>
+                  <dt class="text-muted">{tr('Jméno')}</dt>
                   <dd class="font-medium text-text">{user().firstName || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Příjmení</dt>
+                  <dt class="text-muted">{tr('Příjmení')}</dt>
                   <dd class="font-medium text-text">{user().lastName || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Zobrazované jméno</dt>
+                  <dt class="text-muted">{tr('Zobrazované jméno')}</dt>
                   <dd class="font-medium text-text">{user().callName || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">E-mail</dt>
+                  <dt class="text-muted">{tr('E-mail')}</dt>
                   <dd class="font-medium text-text">{user().email || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Telefon</dt>
+                  <dt class="text-muted">{tr('Telefon')}</dt>
                   <dd class="font-medium text-text">{user().phone || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Datum narození</dt>
+                  <dt class="text-muted">{tr('Datum narození')}</dt>
                   <dd class="font-medium text-text">{user().birthDate || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Číslo dresu</dt>
+                  <dt class="text-muted">{tr('Číslo dresu')}</dt>
                   <dd class="font-medium text-text">{user().jerseyNumber || '—'}</dd>
                 </div>
                 <div>
-                  <dt class="text-muted">Pohlaví</dt>
+                  <dt class="text-muted">{tr('Pohlaví')}</dt>
                   <dd class="font-medium text-text">
-                    {user().gender === 'MALE' ? 'Muž' : 'Žena'}
+                    {user().gender === 'MALE' ? tr('Muž') : tr('Žena')}
                   </dd>
                 </div>
               </dl>

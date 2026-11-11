@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import { getDiscussionsWithNew, createDiscussion, type Discussion } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 export default function DiscussionsPage() {
@@ -42,14 +43,22 @@ export default function DiscussionsPage() {
     createMutation.mutate({ caption: caption(), description: description() })
   }
 
+  // There is no `canCreate` flag on the API. Creating needs SYS:DIS_CREATE, which the
+  // payload does not expose, so we use the closest available signal: being allowed to
+  // write in at least one discussion (plus admins, who always may).
+  const canCreateDiscussion = () =>
+    (discussionsQuery.data ?? []).some(d => d.canWrite)
+
   return (
     <div class="discussions-page">
       <div class="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 class="text-xl font-semibold text-text">{tDiscussions('title')}</h1>
-        <button class="btn btn-primary" onClick={() => setShowCreate(true)}>
-          <span class="icon" innerHTML={ICONS['chat']} />
-          Nová diskuze
-        </button>
+        <Show when={canCreateDiscussion()}>
+          <button class="btn btn-primary" onClick={() => setShowCreate(true)}>
+            <span class="icon" innerHTML={ICONS['chat']} />
+            {tr('Nová diskuze')}
+          </button>
+        </Show>
       </div>
 
       <Show when={!discussionsQuery.isPending} fallback={<p class="text-muted">{tCommon('loading')}</p>}>
@@ -59,8 +68,12 @@ export default function DiscussionsPage() {
             <div class="text-center py-12">
               <div class="icon icon-lg text-muted mb-3" innerHTML={ICONS['chat']} />
               <h3 class="text-lg font-medium text-text mb-1">{tDiscussions('noDiscussions')}</h3>
-              <p class="text-muted mb-4">Zatím nejsou k dispozici žádné diskuze.</p>
-              <button class="btn btn-primary" onClick={() => setShowCreate(true)}>Vytvořit první diskuzi</button>
+              <p class="text-muted mb-4">{tr('Zatím nejsou k dispozici žádné diskuze.')}</p>
+              <Show when={canCreateDiscussion()}>
+                <button class="btn btn-primary" onClick={() => setShowCreate(true)}>
+                  {tr('Vytvořit první diskuzi')}
+                </button>
+              </Show>
             </div>
           }
         >
@@ -78,7 +91,7 @@ export default function DiscussionsPage() {
                         <h3 class="font-semibold text-text truncate">{discussion.caption}</h3>
                         <Show when={discussion.newPosts > 0}>
                           <span class="badge bg-danger text-white text-xs flex-shrink-0">
-                            {discussion.newPosts} nových
+                            {tr('{n} nových', { n: discussion.newPosts })}
                           </span>
                         </Show>
                       </div>
@@ -87,10 +100,10 @@ export default function DiscussionsPage() {
                       </Show>
                       <div class="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted">
                         <Show when={discussion.publicRead}>
-                          <span class="badge bg-success-light text-success">Veřejné</span>
+                          <span class="badge bg-success-light text-success">{tr('Veřejné')}</span>
                         </Show>
                         <Show when={!discussion.canWrite}>
-                          <span class="badge bg-danger-light text-danger">Uzamčeno</span>
+                          <span class="badge bg-danger-light text-danger">{tr('Uzamčeno')}</span>
                         </Show>
                       </div>
                     </div>
@@ -108,10 +121,10 @@ export default function DiscussionsPage() {
           onClick={() => setShowCreate(false)}
         >
           <div class="bg-elevated rounded-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <h2 class="text-lg font-semibold text-text mb-4">Nová diskuze</h2>
+            <h2 class="text-lg font-semibold text-text mb-4">{tr('Nová diskuze')}</h2>
             <form onSubmit={handleCreate} class="space-y-4">
               <div>
-                <label class="label">Název <span class="text-danger">*</span></label>
+                <label class="label">{tr('Název')} <span class="text-danger">*</span></label>
                 <input
                   class="input w-full mt-1"
                   value={caption()}
@@ -120,7 +133,7 @@ export default function DiscussionsPage() {
                 />
               </div>
               <div>
-                <label class="label">Popis</label>
+                <label class="label">{tr('Popis')}</label>
                 <textarea
                   class="input w-full mt-1 min-h-[80px]"
                   value={description()}
@@ -132,7 +145,7 @@ export default function DiscussionsPage() {
                   {tCommon('cancel')}
                 </button>
                 <button type="submit" class="btn btn-primary" disabled={createMutation.isPending}>
-                  {createMutation.isPending ? 'Vytváření…' : 'Vytvořit'}
+                  {createMutation.isPending ? tr('Vytváření…') : tr('Vytvořit')}
                 </button>
               </div>
             </form>

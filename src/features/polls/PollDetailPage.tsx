@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import { getPoll, submitPollVotes, type Poll, type PollOption } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
+import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
 
 type VoteValue = string | number | boolean
@@ -66,8 +67,8 @@ export default function PollDetailPage() {
         when={pollQuery.data}
         fallback={
           <div class="text-center p-8">
-            <h2 class="text-xl font-semibold text-text mb-2">Anketa nenalezena</h2>
-            <button class="btn btn-primary" onClick={() => navigate('/polls')}>Zpět k anketám</button>
+            <h2 class="text-xl font-semibold text-text mb-2">{tr('Anketa nenalezena')}</h2>
+            <button class="btn btn-primary" onClick={() => navigate('/polls')}>{tr('Zpět k anketám')}</button>
           </div>
         }
       >
@@ -94,10 +95,10 @@ export default function PollDetailPage() {
                           'bg-danger-light text-danger': isClosed()
                         }}
                       >
-                        {isClosed() ? 'Uzavřeno' : 'Otevřeno'}
+                        {isClosed() ? tr('Uzavřeno') : tr('Otevřeno')}
                       </span>
                       <Show when={poll().voted}>
-                        <span class="badge bg-primary-light text-primary">Hlasováno</span>
+                        <span class="badge bg-primary-light text-primary">{tr('Hlasováno')}</span>
                       </Show>
                     </div>
                   </div>
@@ -147,7 +148,7 @@ export default function PollDetailPage() {
                             <div class="flex items-center justify-between text-sm mb-1">
                               <span class="text-text">{option.caption}</span>
                               <span class="text-muted">
-                                {voteCountFor(poll(), option)} hlasů
+                                {tr('{n} hlasů', { n: voteCountFor(poll(), option) })}
                               </span>
                             </div>
                             <div class="h-2 bg-100 rounded-full overflow-hidden">
@@ -170,13 +171,13 @@ export default function PollDetailPage() {
                   disabled={voteMutation.isPending || Object.keys(selected()).length === 0}
                   onClick={() => voteMutation.mutate()}
                 >
-                  {voteMutation.isPending ? 'Odesílání…' : 'Hlasovat'}
+                  {voteMutation.isPending ? tr('Odesílání…') : tr('Hlasovat')}
                 </button>
               </Show>
 
               <Show when={!canVote() && !showResults()}>
                 <p class="text-center text-muted py-4">
-                  {isClosed() ? 'Anketa je uzavřena.' : 'Výsledky budou zobrazeny po uzavření ankety.'}
+                  {isClosed() ? tr('Anketa je uzavřena.') : tr('Výsledky budou zobrazeny po uzavření ankety.')}
                 </p>
               </Show>
             </div>

@@ -25,6 +25,7 @@ import type {
 } from './types'
 
 import { getTeam } from './team'
+import { tr } from './i18n'
 
 // Re-export types for consumers
 export type {
@@ -159,7 +160,7 @@ async function requestEnvelope<T>(path: string, init: RequestInit = {}): Promise
   try {
     json = await response.json()
   } catch {
-    throw new ApiError('Neplatná odpověď serveru', response.status)
+    throw new ApiError(tr('Neplatná odpověď serveru'), response.status)
   }
 
   if (!response.ok || json.status !== 'OK') {
@@ -209,10 +210,10 @@ async function requestBlob(path: string, init: RequestInit = {}): Promise<Blob> 
 
   if (response.status === 401) {
     unauthorizedListener?.()
-    throw new ApiError('Platnost přihlášení vypršela', 401)
+    throw new ApiError(tr('Platnost přihlášení vypršela'), 401)
   }
   if (!response.ok) {
-    throw new ApiError(`Export se nezdařil (HTTP ${response.status})`, response.status)
+    throw new ApiError(tr('Export se nezdařil (HTTP {status})', { status: response.status }), response.status)
   }
   return response.blob()
 }
@@ -334,7 +335,7 @@ export async function login(credentials: { login: string; password: string }): P
 
   const sessionKey = (envelope as unknown as { sessionKey?: string }).sessionKey
   if (!sessionKey) {
-    throw new ApiError('Server nevrátil přihlašovací klíč', 200)
+    throw new ApiError(tr('Server nevrátil přihlašovací klíč'), 200)
   }
   const user = envelope.data as User
 
