@@ -103,6 +103,8 @@ function Loading() {
   )
 }
 
+type ChatCache = { pages: DiscussionPage[]; pageParams: number[] }
+
 export default function DiscussionDetailPage() {
   const params = useParams()
   const navigate = useNavigate()
@@ -298,24 +300,109 @@ export default function DiscussionDetailPage() {
     })
   }
 
-  const createMutation = useMutation<DiscussionPost, Error, string>(() => ({
+  // Shape of the placeholder post shown while the API call is in flight. Negative id
+  // keeps it from colliding with server ids; on success it is replaced by the real post.
+  const optimisticPost = (text: string): DiscussionPost => {
+    const user = auth().user
+    return {
+      id: -Date.now() - Math.floor(Math.random() * 1000),
+      discussionId: discussionId(),
+      post: text,
+      createdById: user?.id ?? null,
+      createdAt: new Date().toISOString(),
+      updatedAt: null,
+      sticky: false,
+      newPost: false,
+      userName: user?.callName ?? null,
+      reactions: {},
+      createdAtStr: '',
+      updatedAtStr: null,
+      createdBy: user
+        ? {
+            id: user.id,
+            login: user.login,
+            callName: user.callName,
+            displayName: user.displayName,
+            pictureUrl: user.pictureUrl,
+            gender: user.gender,
+            status: user.status
+          }
+        : null
+    }
+  }
+
+  const createMutation = useMutation<
+    DiscussionPost,
+    Error,
+    string,
+    { post: DiscussionPost }
+  >(() => ({
     mutationFn: (post: string) => createDiscussionPost(discussionId(), post),
-    onSuccess: async () => {
+    // The message appears immediately; the request finishes in the background. The
+    // composer is already cleared, so a slow API never feels like lag.
+    onMutate: (text: string) => {
+      const post = optimisticPost(text)
+      queryClient.setQueryData<ChatCache>(chatKey(), old => {
+        const first = old?.pages[0]
+        if (!old || !first) return old
+        return {
+          ...old,
+          pages: [{ ...first, posts: [post, ...first.posts] }, ...old.pages.slice(1)]
+        }
+      })
       setNewPost('')
-      if (textareaEl) {
-        textareaEl.style.height = 'auto'
-        textareaEl.focus()
-      }
-      await queryClient.invalidateQueries({ queryKey: chatKey() })
-      void queryClient.invalidateQueries({ queryKey: queryKeys.discussionsWithNew() })
+      if (textareaEl) textareaEl.style.height = 'auto'
       requestAnimationFrame(() => scrollToBottom(true))
+      return { post }
+    },
+    onSuccess: (created, _text, context) => {
+      if (context) {
+        queryClient.setQueryData<ChatCache>(chatKey(), old =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map(page => ({
+                  ...page,
+                  posts: page.posts.map(post => (post.id === context.post.id ? created : post))
+                }))
+              }
+            : old
+        )
+      }
+      // The list itself is fresh; only the "new posts" badges need a round-trip.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.discussionsWithNew() })
+      void queryClient.invalidateQueries({ queryKey: chatKey(), refetchType: 'none' })
+      if (textareaEl) textareaEl.focus()
+      requestAnimationFrame(() => scrollToBottom(true))
+    },
+    onError: (_error, text, context) => {
+      if (context) {
+        queryClient.setQueryData<ChatCache>(chatKey(), old =>
+          old
+            ? {
+                ...old,
+                pages: old.pages.map(page => ({
+                  ...page,
+                  posts: page.posts.filter(post => post.id !== context.post.id)
+                }))
+              }
+            : old
+        )
+      }
+      // Give the text back, so a failed send does not lose the message.
+      setNewPost(text)
+      requestAnimationFrame(() => {
+        textareaEl?.focus()
+        resizeComposer()
+      })
     }
   }))
 
   const handleSubmit = (e: SubmitEvent) => {
     e.preventDefault()
-    if (!newPost().trim() || createMutation.isPending) return
-    createMutation.mutate(newPost())
+    const text = newPost()
+    if (!text.trim()) return
+    createMutation.mutate(text)
   }
 
   const handleKeyDown = (e: KeyboardEvent) => {
@@ -491,20 +578,15 @@ export default function DiscussionDetailPage() {
                       onKeyDown={handleKeyDown}
                       placeholder={tDiscussions('writePost')}
                       aria-label={tr('Nová zpráva')}
-                      disabled={createMutation.isPending}
                     />
                     <button
                       type="submit"
                       class="header-btn w-9 h-9 rounded-md mb-1 flex-shrink-0 hover:bg-100 disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={createMutation.isPending || !newPost().trim()}
+                      disabled={!newPost().trim()}
                       aria-label={tr('Odeslat')}
                       title={tr('Odeslat (Enter)')}
                     >
-                      <span
-                        class="icon-md"
-                        classList={{ 'animate-pulse': createMutation.isPending }}
-                        innerHTML={ICONS['send']}
-                      />
+                      <span class="icon-md" innerHTML={ICONS['send']} />
                     </button>
                   </div>
 

@@ -26,6 +26,7 @@ import type {
 
 import { getTeam } from './team'
 import { tr } from './i18n'
+import { lang } from './prefs'
 
 // Re-export types for consumers
 export type {
@@ -137,6 +138,8 @@ async function requestEnvelope<T>(path: string, init: RequestInit = {}): Promise
     headers.set('Content-Type', 'application/json')
   }
   headers.set('Accept', 'application/json')
+  // Lets the API localise anything it has translations for (event types, captions).
+  headers.set('Accept-Language', lang() === 'en' ? 'en' : 'cs')
 
   if (tsid) {
     // Session is a PHPSESSID cookie. Browsers can't set it from JS, so the dev

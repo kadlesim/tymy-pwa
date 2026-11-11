@@ -50,7 +50,7 @@ export const queryKeys = {
   event: (id: number) => ['event', id] as const,
   eventAttendance: (id: number) => ['event', id, 'attendance'] as const,
   eventHistory: (id: number) => ['event', id, 'history'] as const,
-  eventTypes: () => ['eventTypes'] as const,
+  eventTypes: (lang: string = 'cs') => ['eventTypes', lang] as const,
   discussions: () => ['discussions'] as const,
   discussionsWithNew: () => ['discussions', 'withNew'] as const,
   discussionsNewOnly: () => ['discussions', 'newOnly'] as const,

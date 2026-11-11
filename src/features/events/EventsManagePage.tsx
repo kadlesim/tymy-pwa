@@ -22,13 +22,14 @@ import {
   type Event,
   type EventType
 } from '../../lib/api'
-import { invalidateEvents } from '../../lib/queryClient'
-import { isAdmin } from '../../lib/auth'
+import { invalidateEvents, queryKeys } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { formatApiDate, formatDisplayDate, formatDisplayTime } from '../../lib/date-filters'
+import { lang } from '../../lib/prefs'
 import { ICONS } from '../../lib/icons'
 import { EVENT_TYPE_COLORS } from './constants'
+import { eventTypeCaption } from '../../lib/event-labels'
 
 type Notice = { kind: 'ok' | 'err'; text: string }
 
@@ -103,14 +104,14 @@ export default function EventsManagePage() {
   }))
 
   const eventTypesQuery = useQuery<EventType[], Error>(() => ({
-    queryKey: ['eventTypes'],
+    queryKey: queryKeys.eventTypes(lang()),
     queryFn: getEventTypes,
     staleTime: 1000 * 60 * 60
   }))
 
   const eventTypes = () => eventTypesQuery.data ?? []
   const typeCaption = (code: string) =>
-    eventTypes().find(t => t.code === code)?.caption ?? code
+    eventTypeCaption(code, eventTypes().find(t => t.code === code)?.caption)
   const typeColor = (code: string) => EVENT_TYPE_COLORS[code] ?? 'primary'
 
   const years = createMemo(() => {
@@ -321,12 +322,10 @@ export default function EventsManagePage() {
             <span class="icon-sm" innerHTML={ICONS['back']} />
             {tr('Zpět na události')}
           </A>
-          <Show when={isAdmin()}>
-            <A href="/events/create" class="btn btn-primary">
-              <span class="icon-sm" innerHTML={ICONS['plus']} />
-              {tr('Nová událost')}
-            </A>
-          </Show>
+          <A href="/events/create" class="btn btn-primary">
+            <span class="icon-sm" innerHTML={ICONS['plus']} />
+            {tr('Nová událost')}
+          </A>
         </div>
       </div>
 
@@ -406,7 +405,7 @@ export default function EventsManagePage() {
                   onChange={e => setSeriesType(e.currentTarget.value)}
                   disabled={createSeriesMutation.isPending}
                 >
-                  <For each={eventTypes()}>{(type) => <option value={type.code}>{type.caption}</option>}</For>
+                  <For each={eventTypes()}>{(type) => <option value={type.code}>{eventTypeCaption(type.code, type.caption)}</option>}</For>
                 </select>
               </div>
               <div>

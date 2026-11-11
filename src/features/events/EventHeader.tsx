@@ -1,6 +1,7 @@
 import { Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
 import { tr } from '../../lib/i18n'
+import { eventTypeCaption } from '../../lib/event-labels'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import type { Event } from '../../lib/api'
 
@@ -52,7 +53,7 @@ export default function EventHeader(props: EventHeaderProps) {
                 class="badge type-badge text-xs"
                 style={`background-color: var(--color-${color()}-light); color: var(--color-${color()})`}
               >
-                {props.event.eventType?.caption || props.event.type}
+                {eventTypeCaption(props.event.type, props.event.eventType?.caption)}
               </span>
             </div>
           </div>

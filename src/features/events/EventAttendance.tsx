@@ -6,7 +6,8 @@ import { createMemo, createSignal, For, Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
 import { tr } from '../../lib/i18n'
 import { apiAssetUrl } from '../../lib/api'
-import { STATUS_COLORS, STATUS_LABELS } from './constants'
+import { STATUS_COLORS } from './constants'
+import { attendanceCaption } from '../../lib/event-labels'
 import { formatDisplayDateTime } from '../../lib/date-filters'
 import { getLocale } from '../../lib/prefs'
 
@@ -79,7 +80,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
 
     const order: Group[] = props.statusOptions.map(option => ({
       code: option.code,
-      label: option.caption || STATUS_LABELS[option.code] || option.code,
+      label: attendanceCaption(option.code, option.caption),
       color: STATUS_COLORS[option.code] ?? 'secondary',
       items: []
     }))
@@ -96,7 +97,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
       const group = code ? order.find(g => g.code === code) : undefined
       if (group) group.items = sorted
       else if (!code) withoutStatus.items = sorted
-      else order.push({ code, label: STATUS_LABELS[code] ?? code, color: STATUS_COLORS[code] ?? 'secondary', items: sorted })
+      else order.push({ code, label: attendanceCaption(code), color: STATUS_COLORS[code] ?? 'secondary', items: sorted })
     }
 
     return [...order, withoutStatus].filter(group => group.items.length > 0)
@@ -192,7 +193,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
                               class="badge text-xs"
                               style={`background-color: var(--color-${STATUS_COLORS[from()] || 'secondary'}); color: white`}
                             >
-                              {STATUS_LABELS[from()] || from()}
+                              {attendanceCaption(from())}
                             </span>
                             <span class="icon text-muted" innerHTML={ICONS['chevronDown']} />
                           </>
@@ -204,7 +205,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
                             class="badge text-xs"
                             style={`background-color: var(--color-${STATUS_COLORS[to()] || 'secondary'}); color: white`}
                           >
-                            {STATUS_LABELS[to()] || to()}
+                            {attendanceCaption(to())}
                           </span>
                         )}
                       </Show>

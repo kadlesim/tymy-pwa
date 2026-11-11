@@ -11,7 +11,8 @@ import {
   type Event,
   type User
 } from '../../lib/api'
-import { STATUS_COLORS, STATUS_LABELS } from '../events/constants'
+import { STATUS_COLORS } from '../events/constants'
+import { attendanceCaption } from '../../lib/event-labels'
 import { formatDisplayDate } from '../../lib/date-filters'
 import { getLocale } from '../../lib/prefs'
 import { tr } from '../../lib/i18n'
@@ -34,7 +35,7 @@ const statusColor = (code?: string | null): string =>
   code ? `var(--color-${STATUS_COLORS[code] ?? 'secondary'})` : 'var(--color-text-muted)'
 
 const statusLabel = (code?: string | null): string =>
-  code ? STATUS_LABELS[code] ?? code : '—'
+  code ? attendanceCaption(code) : '—'
 
 const yearsBack = 15
 

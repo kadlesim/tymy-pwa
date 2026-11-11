@@ -16,10 +16,12 @@ import {
 import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
-import { useAuth, isAdmin } from '../../lib/auth'
+import { useAuth } from '../../lib/auth'
+import { lang } from '../../lib/prefs'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
-import { STATUS_COLORS, STATUS_LABELS } from './constants'
+import { STATUS_COLORS } from './constants'
+import { attendanceCaption, eventTypeCaption } from '../../lib/event-labels'
 import EventMonthView from './EventMonthView'
 
 type EventTab = 'upcoming' | 'past' | 'pending'
@@ -91,7 +93,7 @@ export default function EventsPage() {
   }))
 
   const eventTypesQuery = useQuery<EventType[], Error>(() => ({
-    queryKey: queryKeys.eventTypes(),
+    queryKey: queryKeys.eventTypes(lang()),
     queryFn: getEventTypes,
     staleTime: 1000 * 60 * 60
   }))
@@ -232,12 +234,10 @@ export default function EventsPage() {
               <span class="icon-sm" innerHTML={ICONS['settings']} />
               {tr('Správa')}
             </A>
-            <Show when={isAdmin()}>
-              <A href="/events/create" class="btn btn-primary">
-                <span class="icon-sm" innerHTML={ICONS['plus']} />
-                {tr('Nová událost')}
-              </A>
-            </Show>
+            <A href="/events/create" class="btn btn-primary">
+              <span class="icon-sm" innerHTML={ICONS['plus']} />
+              {tr('Nová událost')}
+            </A>
           </div>
         </div>
 
@@ -316,7 +316,7 @@ export default function EventsPage() {
           >
             <option value="all">{tr('Všechny typy')}</option>
             <For each={eventTypes()}>
-              {(type) => <option value={type.code}>{type.caption}</option>}
+              {(type) => <option value={type.code}>{eventTypeCaption(type.code, type.caption)}</option>}
             </For>
           </select>
         </div>
@@ -463,7 +463,7 @@ function EventCard(props: EventCardProps) {
                 </div>
               </div>
               <span class="badge bg-100 text-text-secondary text-xs flex-shrink-0">
-                {props.event.eventType?.caption || props.event.type}
+                {eventTypeCaption(props.event.type, props.event.eventType?.caption)}
               </span>
             </div>
 
@@ -494,7 +494,7 @@ function EventCard(props: EventCardProps) {
                           aria-pressed={selected()}
                           onClick={() => props.onRsvp(option.code)}
                         >
-                          {STATUS_LABELS[option.code] || option.caption}
+                          {attendanceCaption(option.code, option.caption)}
                         </button>
                       )
                     }}
@@ -507,7 +507,7 @@ function EventCard(props: EventCardProps) {
               <div class="mt-3 pt-3 border-t border-border-light text-xs text-muted">
                 {tr('Vaše účast:')}{' '}
                 <span class="badge bg-100 text-text-secondary">
-                  {STATUS_LABELS[myStatus()!] || myStatus()}
+                  {attendanceCaption(myStatus()!)}
                 </span>
               </div>
             </Show>

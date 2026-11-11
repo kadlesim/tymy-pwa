@@ -15,6 +15,8 @@ import { queryKeys, invalidateEvents } from '../../lib/queryClient'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { formatApiDate } from '../../lib/date-filters'
+import { lang } from '../../lib/prefs'
+import { eventTypeCaption } from '../../lib/event-labels'
 import { ICONS } from '../../lib/icons'
 
 // Value shaped for <input type="datetime-local">, in local time.
@@ -58,7 +60,7 @@ export default function EventCreatePage() {
   const [isSubmitting, setIsSubmitting] = createSignal(false)
 
   const eventTypesQuery = useQuery<EventType[], Error>(() => ({
-    queryKey: queryKeys.eventTypes(),
+    queryKey: queryKeys.eventTypes(lang()),
     queryFn: getEventTypes,
     staleTime: 1000 * 60 * 60
   }))
@@ -206,7 +208,7 @@ export default function EventCreatePage() {
                 disabled={isSubmitting()}
               >
                 <For each={eventTypesQuery.data ?? []}>
-                  {(t) => <option value={t.code}>{t.caption}</option>}
+                  {(t) => <option value={t.code}>{eventTypeCaption(t.code, t.caption)}</option>}
                 </For>
               </select>
             </div>

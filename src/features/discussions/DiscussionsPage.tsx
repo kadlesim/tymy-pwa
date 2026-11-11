@@ -5,6 +5,7 @@ import { useNavigate } from '@solidjs/router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import { getDiscussionsWithNew, createDiscussion, type Discussion } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
+import { isAdmin } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
@@ -43,11 +44,9 @@ export default function DiscussionsPage() {
     createMutation.mutate({ caption: caption(), description: description() })
   }
 
-  // There is no `canCreate` flag on the API. Creating needs SYS:DIS_CREATE, which the
-  // payload does not expose, so we use the closest available signal: being allowed to
-  // write in at least one discussion (plus admins, who always may).
-  const canCreateDiscussion = () =>
-    (discussionsQuery.data ?? []).some(d => d.canWrite)
+  // The API exposes no `canCreate` flag; the team's admins are the only ones for whom
+  // the "new discussion" button is rendered (the server still checks SYS:DIS_CREATE).
+  const canCreateDiscussion = () => isAdmin()
 
   return (
     <div class="discussions-page">

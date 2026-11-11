@@ -174,6 +174,7 @@ src/
 │   ├── team.ts         team (subdomain) selection, stored as `tymy:team`
 │   ├── bbcode.ts       safe BBCode ↔ HTML
 │   ├── date-filters.ts API date formatting + display helpers
+│   ├── event-labels.ts localised event-type / attendance captions (EN fallback map)
 │   ├── icons.ts        MDI Light inline SVG set (shared by layout and features)
 │   ├── queryClient.ts  QueryClient, persistence, query keys, invalidators
 │   ├── pwa.ts          SW update listeners, install prompt, push helpers
@@ -215,12 +216,15 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   dates and posts an **array** to `POST /events/create` (the endpoint is natively bulk)
   with a 200-event cap. The events page links to it via "Správa"; the single-event
   "Nová událost" button next to it is admin-only (§5).
-- **Creating a single event is admin-only**: the "Nová událost" buttons (events page and
-  management page) render only for `isAdmin()` (the user's `roles` contain `SUPER`). The
-  API exposes no global `SYS:EVE_CREATE` flag, so the role is the proxy; the server still
-  enforces the right. `/events/create` remains reachable by URL. The series builder on
-  `/events/manage` is **not** gated (only the single-event button was requested) — say the
-  word if it should follow the same rule.
+- **Creating a discussion is admin-only**: the "Nová diskuze" button (and the empty-state
+  "create the first discussion" button) render only for `isAdmin()` (the user's `roles`
+  contain `SUPER`). Event creation is **not** gated — "Nová událost" is shown to everyone
+  again; the server enforces `SYS:EVE_*` either way.
+- **Event type / attendance labels are localised client-side** (`src/lib/event-labels.ts`):
+  API requests carry `Accept-Language: en|cs`, so the server may return translated
+  captions; if it returns an empty caption or one of the built-in Czech defaults
+  (`Trénink`, `Přijdu`, …), the English map (`Training`, `Attending`, …) fills in. Custom
+  captions and custom codes are left untouched.
 - **Preferences** (`src/lib/prefs.ts`): `tymy:theme` (`light|dark`), `tymy:lang`
   (`cs|en`) and `tymy:text-size` (`normal|large`), applied to `<html>` by `initPrefs()`
   before the first render (no flash of the wrong theme). Controls: three icon buttons next
@@ -293,6 +297,12 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - Editing swaps the bubble for a textarea holding the raw BBCode (Uložit / Zrušit).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
     (the client-side preview toggle was removed on request).
+  - **Posting is optimistic**: the composer clears immediately, a placeholder post
+    (negative id) is prepended to the chat cache, and the request runs in the background.
+    On success the placeholder is replaced by the returned post — the conversation is only
+    marked stale (`refetchType: 'none'`), so nothing jumps — and the "new posts" badges
+    refetch; on failure the placeholder is removed, the error shows above the composer and
+    the text is put back into the input.
 - **Nav** is not role-filtered (accounts may have `roles: []`); per-action rights come
   from API flags (`canPlan`, `canWrite`, `canView`, …).
 - **Guards** wait for `initAuth()` (`useIsLoading`) so deep links survive reload.
@@ -425,8 +435,15 @@ smoke test confirmed:
   `favicon-32.png`, `favicon-192.png` and `apple-touch-icon.png` from `logo2.png`.
 - Also fixed while there: the two remaining emoji glyphs (🔑, 👁) became MDI `lock`/`eye`.
 - After switching the icon source to the square `logo2.png`, the icons were regenerated
-  (flattened onto white, maskable padded) and the "Nová událost" buttons hidden in the
-  mocked session (`roles: []`), so the admin-only rule is exercised.
+  (flattened onto white, maskable padded).
+- English labels: with a mock that returns Czech captions, the EN UI showed **Training /
+  Match** type badges and **Attending / Not attending / Arriving late** RSVP buttons.
+- Optimistic chat post, checked against a mock with a **1.5 s delayed POST**: the message
+  was on screen 250 ms after submit with the composer already empty; after the response
+  exactly one copy remained; with a failing POST the placeholder disappeared, the error
+  appeared and the text was restored. **0 console errors**.
+- Discussion creation is admin-only now: with `roles: []` the "New discussion" button is
+  absent; the event "Nová událost" buttons are back for everyone.
 
 ---
 
@@ -475,9 +492,9 @@ smoke test confirmed:
     silently, so add entries to `src/lib/i18n.ts` with every new string.
 14. **`npm run icons` needs `logo2.png`** (square) in the repo root and the `sharp`
     devDependency; it rewrites `public/icons/*` plus the favicons.
-15. **Event creation is gated by `isAdmin()`** (`SUPER` role), not by the real
-    `SYS:EVE_CREATE` right — no API flag exists. If a planner without `SUPER` should be
-    allowed to create, replace the predicate (and decide whether the series builder follows).
+15. **Discussion creation is gated by `isAdmin()`** (`SUPER` role), not by the real
+    `SYS:DIS_CREATE` right — the API exposes no flag. Replace the predicate if one appears
+    (or if planners should be allowed too).
 
 ---
 
@@ -553,6 +570,13 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   after `@tailwind utilities`; a search field that needs room for an icon must set
   `padding-left` inline (the manage page does).
 - **`npm run icons` is no longer dependency-free** — it uses `sharp` and reads `logo2.png`.
+- **Optimistic chat posts** carry a negative id and live at the front of `pages[0].posts`
+  (page 1 is newest-first). Replace the placeholder in `onSuccess` and mark the chat query
+  stale with `refetchType: 'none'` — a full invalidation refetches every loaded page and
+  the list jumps.
+- **`Accept-Language` is sent on every API request** based on the UI language. Event type
+  captions are usually still Czech, so `event-labels.ts` fills in English for the standard
+  codes; the `eventTypes` query key includes the language to refetch if the server localises.
 - **Vite's proxy has no `router` option** in 5.4 (it is silently ignored, so every request
   quietly hit the default host). Multi-team dev routing therefore overrides the `Host`
   header in `proxyReq`; verify with

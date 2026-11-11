@@ -3,6 +3,7 @@
 import { createEffect, createSignal, For, Show } from 'solid-js'
 import { ICONS } from '../../lib/icons'
 import { tr } from '../../lib/i18n'
+import { attendanceCaption } from '../../lib/event-labels'
 import { STATUS_COLORS, STATUS_LABELS } from './constants'
 
 export interface RsvpOption {
@@ -61,7 +62,7 @@ export default function EventRsvp(props: EventRsvpProps) {
                 class="badge px-2 py-0.5 text-xs"
                 style={`background-color: var(--color-${STATUS_COLORS[props.myStatus!] || 'secondary'}); color: white`}
               >
-                {STATUS_LABELS[props.myStatus!] || props.myStatus}
+                {attendanceCaption(props.myStatus!, STATUS_LABELS[props.myStatus!])}
               </span>
               <Show when={props.myNote}>
                 <span class="text-sm text-muted">„{props.myNote}“</span>
@@ -90,7 +91,7 @@ export default function EventRsvp(props: EventRsvpProps) {
                   disabled={props.isPending || selected()}
                   aria-pressed={selected()}
                 >
-                  {option.caption || STATUS_LABELS[option.code] || option.code}
+                  {attendanceCaption(option.code, option.caption || STATUS_LABELS[option.code])}
                 </button>
               )
             }}
