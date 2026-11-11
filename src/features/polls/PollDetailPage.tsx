@@ -13,6 +13,7 @@ import {
   type PollOption,
   type User
 } from '../../lib/api'
+import type { UserSummary } from '../../lib/types'
 import { queryKeys } from '../../lib/queryClient'
 import { USER_STATUSES } from '../../lib/user-status'
 import { getLocale } from '../../lib/prefs'
@@ -39,15 +40,24 @@ export default function PollDetailPage() {
     enabled: pollId() > 0
   }))
 
-  // Votes only carry userIds, so the names/avatars come from the roster (all categories).
+  // Votes usually carry only userIds; names come from the roster (all categories, one
+  // failing category must not kill the rest), and votes that embed a `user` are used first.
   const usersQuery = useQuery<User[], Error>(() => ({
     queryKey: ['users', 'poll-voters'],
     queryFn: async () => {
-      const lists = await Promise.all(USER_STATUSES.map(status => getUsersByStatus(status)))
-      return lists.flat()
+      const lists = await Promise.allSettled(USER_STATUSES.map(status => getUsersByStatus(status)))
+      return lists.flatMap(result => (result.status === 'fulfilled' ? result.value : []))
     },
     staleTime: 1000 * 60 * 10
   }))
+
+  const voteUsersById = createMemo(() => {
+    const map = new Map<number, UserSummary>()
+    for (const vote of pollQuery.data?.votes ?? []) {
+      if (vote.user) map.set(vote.userId, vote.user)
+    }
+    return map
+  })
 
   const baseUsersById = createMemo(() => {
     const map = new Map<number, User>()
@@ -60,9 +70,10 @@ export default function PollDetailPage() {
     if (!poll) return []
     const ids = new Set<number>()
     for (const vote of poll.votes ?? []) ids.add(vote.userId)
-    const base = baseUsersById()
+    const roster = baseUsersById()
+    const embedded = voteUsersById()
     const label = (id: number) => {
-      const user = base.get(id)
+      const user = embedded.get(id) ?? roster.get(id)
       return user?.displayName || user?.callName || user?.login || ''
     }
     return [...ids].sort((a, b) => label(a).localeCompare(label(b), getLocale()))
@@ -71,7 +82,7 @@ export default function PollDetailPage() {
   // Voters can be missing from the roster (left the team, alien votes) — ask for those
   // individual users so the table never falls back to "Uživatel 106".
   const missingVoterIds = createMemo(() =>
-    voterIds().filter(id => !baseUsersById().has(id))
+    voterIds().filter(id => !baseUsersById().has(id) && !voteUsersById().has(id))
   )
 
   const extraUsersQuery = useQuery<(User | null)[], Error>(() => ({
@@ -81,16 +92,14 @@ export default function PollDetailPage() {
     staleTime: 1000 * 60 * 10
   }))
 
-  const usersById = createMemo(() => {
-    const map = new Map(baseUsersById())
-    for (const user of extraUsersQuery.data ?? []) {
-      if (user) map.set(user.id, user)
-    }
-    return map
-  })
+  /** Embedded voter → roster → individual `/user/{id}` fallback. */
+  const profileOf = (userId: number): UserSummary | User | undefined => {
+    const extra = (extraUsersQuery.data ?? []).find(user => user?.id === userId)
+    return voteUsersById().get(userId) ?? extra ?? baseUsersById().get(userId)
+  }
 
   const userName = (userId: number): string => {
-    const user = usersById().get(userId)
+    const user = profileOf(userId)
     return (
       user?.displayName ||
       user?.callName ||
@@ -300,9 +309,9 @@ export default function PollDetailPage() {
                                   <div class="flex items-center gap-2">
                                     <Show
                                       when={
-                                        usersById().get(userId)?.pictureUrl &&
+                                        profileOf(userId)?.pictureUrl &&
                                         !brokenAvatars().has(userId)
-                                          ? usersById().get(userId)!.pictureUrl
+                                          ? profileOf(userId)!.pictureUrl
                                           : undefined
                                       }
                                       fallback={

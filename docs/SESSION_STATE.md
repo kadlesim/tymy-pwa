@@ -355,9 +355,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   green/red, NUMBER → the number), and a final **Poznámka** column. The API has no
   per-vote note field, so free-text (TEXT) options are rendered in that column instead of
   getting their own. Columns carry the vote count. `anonymousResults` keeps the aggregate
-  bars and hides the names. Names come from the roster via one query that merges all five
-  `users/status/*` categories; voters missing from it (left the team, alien vote) are
-  fetched individually with `GET /user/{id}`, so the table never shows "Uživatel 106".
+  bars and hides the names. Names resolve in this order: a voter embedded in the vote
+  (`vote.user`, used when the deployment sends it), the roster merged from all five
+  `users/status/*` calls (each settled independently, so one 403 doesn't erase the rest),
+  then `GET /user/{id}` per missing id — so the table avoids "Uživatel 106" whenever the
+  API allows reading the user at all.
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -493,6 +495,9 @@ smoke test confirmed:
   `favicon-32`; `maskable-512` and `apple-touch-icon` stay opaque). Roster search found
   "Jan Novák" from `777222` against `+420 777 222 333` (1 row). In dark mode the muted text
   resolves to `rgb(163, 171, 179)`. **0 console errors**.
+- Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
+  overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
+  `/user/{id}` — verified with a voter absent from every roster category.
 
 ---
 
@@ -635,6 +640,10 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
 - **`Accept-Language` is sent on every API request** based on the UI language. Event type
   captions are usually still Czech, so `event-labels.ts` fills in English for the standard
   codes; the `eventTypes` query key includes the language to refetch if the server localises.
+- **Tailwind Typography does not follow the CSS variables.** `.prose` body text uses the
+  plugin's `--tw-prose-*` defaults (dark grey), so dark mode needs an explicit
+  `.dark .prose { --tw-prose-body: … }` block — otherwise poll/event/chat descriptions are
+  almost unreadable on the dark surface.
 - **Poll detail is `/polls/{id}`** (plural). `/poll/{id}` answers empty and the page
   silently shows "Poll not found". Votes embed only `userId`; anonymity is
   `poll.anonymousResults`, so never render voter names without checking it.

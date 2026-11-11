@@ -229,6 +229,8 @@ export interface PollVote {
   booleanValue?: boolean | null
   updatedById?: number | null
   updatedAt?: string | null
+  /** Some deployments embed the voter (like attendance does); optional. */
+  user?: UserSummary
 }
 
 export interface Poll {

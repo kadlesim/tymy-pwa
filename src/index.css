@@ -717,6 +717,27 @@ label {
   color: var(--color-text);
 }
 
+/* Typography plugin colours do not follow the CSS variables — lift them in dark mode so
+   poll/event/chat descriptions stay readable. */
+.dark .prose {
+  --tw-prose-body: #d7dce1;
+  --tw-prose-headings: #f1f3f5;
+  --tw-prose-lead: #c1c7cd;
+  --tw-prose-links: #dee2e6;
+  --tw-prose-bold: #f1f3f5;
+  --tw-prose-counters: #a3abb3;
+  --tw-prose-bullets: #868e96;
+  --tw-prose-hr: #343a40;
+  --tw-prose-quotes: #c1c7cd;
+  --tw-prose-quote-borders: #343a40;
+  --tw-prose-captions: #a3abb3;
+  --tw-prose-code: #f1f3f5;
+  --tw-prose-pre-code: #e9ecef;
+  --tw-prose-pre-bg: #22262b;
+  --tw-prose-th-borders: #343a40;
+  --tw-prose-td-borders: #2b3036;
+}
+
 .prose img {
   max-width: 100%;
   height: auto;
