@@ -118,6 +118,57 @@ export default function EventAttendance(props: EventAttendanceProps) {
           </button>
         </div>
 
+        <Show when={props.showHistory && props.history.length > 0}>
+          <div class="event-history p-4 bg-50 border-b border-border">
+            <h3 class="text-sm font-medium text-text mb-3">{tr('Historie změn účastí')}</h3>
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+              <For each={props.history}>
+                {(h) => (
+                  <div class="history-item text-sm p-2 bg-elevated rounded">
+                    <div class="flex items-center gap-2 text-muted mb-1">
+                      <span class="font-medium text-text">{h.user?.displayName || h.user?.callName || tr('Neznámý')}</span>
+                      <span>•</span>
+                      <span>{formatDisplayDateTime(h.updatedAt)}</span>
+                    </div>
+                    <div class="flex items-center gap-2 ml-6">
+                      <Show when={h.preStatusFrom}>
+                        {(from) => (
+                          <>
+                            <span
+                              class="badge text-xs"
+                              style={`background-color: var(--color-${STATUS_COLORS[from()] || 'secondary'}); color: white`}
+                            >
+                              {attendanceCaption(from())}
+                            </span>
+                            <span class="icon text-muted" innerHTML={ICONS['chevronDown']} />
+                          </>
+                        )}
+                      </Show>
+
+
+
+
+                      <Show when={h.preStatusTo}>
+                        {(to) => (
+                          <span
+                            class="badge text-xs"
+                            style={`background-color: var(--color-${STATUS_COLORS[to()] || 'secondary'}); color: white`}
+                          >
+                            {attendanceCaption(to())}
+                          </span>
+                        )}
+                      </Show>
+                      <Show when={h.preDescTo}>
+                        <span class="text-muted text-xs">({h.preDescTo})</span>
+                      </Show>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
+
         <For each={groups()}>
           {group => (
             <section class="attendance-group border-t border-border-light first:border-t-0">
@@ -172,53 +223,6 @@ export default function EventAttendance(props: EventAttendanceProps) {
             </section>
           )}
         </For>
-
-        <Show when={props.showHistory && props.history.length > 0}>
-          <div class="event-history p-4 bg-50 border-t border-border">
-            <h3 class="text-sm font-medium text-text mb-3">{tr('Historie změn účastí')}</h3>
-            <div class="space-y-2 max-h-64 overflow-y-auto">
-              <For each={props.history}>
-                {(h) => (
-                  <div class="history-item text-sm p-2 bg-elevated rounded">
-                    <div class="flex items-center gap-2 text-muted mb-1">
-                      <span class="font-medium text-text">{h.user?.displayName || h.user?.callName || tr('Neznámý')}</span>
-                      <span>•</span>
-                      <span>{formatDisplayDateTime(h.updatedAt)}</span>
-                    </div>
-                    <div class="flex items-center gap-2 ml-6">
-                      <Show when={h.preStatusFrom}>
-                        {(from) => (
-                          <>
-                            <span
-                              class="badge text-xs"
-                              style={`background-color: var(--color-${STATUS_COLORS[from()] || 'secondary'}); color: white`}
-                            >
-                              {attendanceCaption(from())}
-                            </span>
-                            <span class="icon text-muted" innerHTML={ICONS['chevronDown']} />
-                          </>
-                        )}
-                      </Show>
-                      <Show when={h.preStatusTo}>
-                        {(to) => (
-                          <span
-                            class="badge text-xs"
-                            style={`background-color: var(--color-${STATUS_COLORS[to()] || 'secondary'}); color: white`}
-                          >
-                            {attendanceCaption(to())}
-                          </span>
-                        )}
-                      </Show>
-                      <Show when={h.preDescTo}>
-                        <span class="text-muted text-xs">({h.preDescTo})</span>
-                      </Show>
-                    </div>
-                  </div>
-                )}
-              </For>
-            </div>
-          </div>
-        </Show>
       </div>
     </Show>
   )

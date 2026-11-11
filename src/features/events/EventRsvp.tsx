@@ -76,7 +76,7 @@ export default function EventRsvp(props: EventRsvpProps) {
             {(option) => {
               const selected = () => props.myStatus === option.code
               const cls = () =>
-                'rsvp-btn px-2.5 py-1 rounded-md text-xs font-medium transition-all ' +
+                'rsvp-btn px-3 py-1.5 rounded-md text-sm font-medium transition-all ' +
                 (selected() ? 'text-white' : 'bg-100 text-text-secondary hover:bg-200') +
                 (props.isPending ? ' opacity-50 cursor-wait' : '')
               const background = () =>

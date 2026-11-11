@@ -10,11 +10,11 @@ import {
   apiAssetUrl,
   type Poll,
   type PollOption,
-  type PollVote,
   type User
 } from '../../lib/api'
 import { queryKeys } from '../../lib/queryClient'
 import { USER_STATUSES } from '../../lib/user-status'
+import { getLocale } from '../../lib/prefs'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr, trBool } from '../../lib/i18n'
 import { ICONS } from '../../lib/icons'
@@ -64,15 +64,29 @@ export default function PollDetailPage() {
     )
   }
 
-  const votesFor = (poll: Poll, optionId: number): PollVote[] =>
-    (poll.votes ?? []).filter(vote => vote.optionId === optionId)
+  const choiceOptions = (poll: Poll): PollOption[] =>
+    (poll.options ?? []).filter(option => option.type !== 'TEXT')
 
-  const voteValue = (vote: PollVote): string => {
-    if (vote.stringValue) return vote.stringValue
-    if (vote.numericValue !== null && vote.numericValue !== undefined) return String(vote.numericValue)
-    if (vote.booleanValue !== null && vote.booleanValue !== undefined) return trBool(vote.booleanValue)
-    return ''
-  }
+  const textOptions = (poll: Poll): PollOption[] =>
+    (poll.options ?? []).filter(option => option.type === 'TEXT')
+
+  const voteOf = (poll: Poll, userId: number, optionId: number) =>
+    (poll.votes ?? []).find(vote => vote.userId === userId && vote.optionId === optionId)
+
+  /** Free-text answers form the "notes" column (the API has no per-vote note field). */
+  const notesFor = (poll: Poll, userId: number): string =>
+    textOptions(poll)
+      .map(option => voteOf(poll, userId, option.id)?.stringValue)
+      .filter((value): value is string => !!value)
+      .join(' · ')
+
+  const voterIds = createMemo(() => {
+    const poll = pollQuery.data
+    if (!poll) return []
+    const ids = new Set<number>()
+    for (const vote of poll.votes ?? []) ids.add(vote.userId)
+    return [...ids].sort((a, b) => userName(a).localeCompare(userName(b), getLocale()))
+  })
 
   const voteMutation = useMutation<void, Error, void>(() => ({
     mutationFn: async () => {
@@ -157,30 +171,32 @@ export default function PollDetailPage() {
               </div>
 
               <div class="space-y-3 mb-6">
-                <For each={poll().options ?? []}>
-                  {(option) => (
-                    <div class="bg-elevated rounded-xl border border-border p-4">
-                      <div class="flex items-center gap-3">
-                        <Show when={option.type === 'TEXT' && !showResults()}>
+                <Show when={!showResults()}>
+                  <For each={poll().options ?? []}>
+                    {(option) => (
+                      <div class="bg-elevated rounded-xl border border-border p-4">
+                        <Show when={option.type === 'TEXT'}>
                           <input
                             type="text"
-                            class="input flex-1"
+                            class="input w-full"
                             placeholder={option.caption}
                             onInput={e => setOption(option.id, e.currentTarget.value)}
                             disabled={!canVote()}
                           />
                         </Show>
-                        <Show when={option.type === 'NUMBER' && !showResults()}>
-                          <label class="text-sm text-text flex-1">{option.caption}</label>
-                          <input
-                            type="number"
-                            class="input w-28"
-                            onInput={e => setOption(option.id, parseFloat(e.currentTarget.value) || 0)}
-                            disabled={!canVote()}
-                          />
+                        <Show when={option.type === 'NUMBER'}>
+                          <div class="flex items-center gap-3">
+                            <label class="text-sm text-text flex-1">{option.caption}</label>
+                            <input
+                              type="number"
+                              class="input w-28"
+                              onInput={e => setOption(option.id, parseFloat(e.currentTarget.value) || 0)}
+                              disabled={!canVote()}
+                            />
+                          </div>
                         </Show>
-                        <Show when={option.type === 'BOOLEAN' && !showResults()}>
-                          <label class="flex items-center gap-2 flex-1 cursor-pointer">
+                        <Show when={option.type === 'BOOLEAN'}>
+                          <label class="flex items-center gap-2 cursor-pointer">
                             <input
                               type="checkbox"
                               class="checkbox w-5 h-5"
@@ -190,9 +206,21 @@ export default function PollDetailPage() {
                             <span class="text-text">{option.caption}</span>
                           </label>
                         </Show>
+                      </div>
+                    )}
+                  </For>
+                </Show>
+              </div>
 
-                        <Show when={showResults()}>
-                          <div class="flex-1 min-w-0">
+              {/* Results: per-player table, or aggregate bars for anonymous polls. */}
+              <Show when={showResults()}>
+                <Show
+                  when={!poll().anonymousResults}
+                  fallback={
+                    <div class="space-y-3 mb-6">
+                      <For each={poll().options ?? []}>
+                        {(option) => (
+                          <div class="bg-elevated rounded-xl border border-border p-4">
                             <div class="flex items-center justify-between text-sm mb-1">
                               <span class="text-text">{option.caption}</span>
                               <span class="text-muted">
@@ -205,61 +233,113 @@ export default function PollDetailPage() {
                                 style={`width: ${totalVotes() ? (voteCountFor(poll(), option) / totalVotes()) * 100 : 0}%`}
                               />
                             </div>
-
-                            {/* Who voted for this option (anonymous polls hide the names). */}
-                            <Show when={!poll().anonymousResults && votesFor(poll(), option.id).length > 0}>
-                              <div class="flex flex-wrap gap-1.5 mt-2">
-                                <For each={votesFor(poll(), option.id)}>
-                                  {(vote) => {
-                                    const voter = () => usersById().get(vote.userId)
+                          </div>
+                        )}
+                      </For>
+                      <p class="text-xs text-muted">
+                        {tr('Anonymní anketa – jména hlasujících se nezobrazují.')}
+                      </p>
+                    </div>
+                  }
+                >
+                  <div class="bg-elevated rounded-xl border border-border overflow-hidden mb-6">
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-sm border-collapse">
+                        <thead>
+                          <tr class="bg-50 border-b border-border text-[11px] uppercase tracking-wide text-muted">
+                            <th class="text-left font-medium px-3 py-2 sticky left-0 z-10 bg-50 whitespace-nowrap">
+                              {tr('Člen')}
+                            </th>
+                            <For each={choiceOptions(poll())}>
+                              {(option) => (
+                                <th class="text-center font-medium px-3 py-2 whitespace-nowrap">
+                                  {option.caption}
+                                  <div class="text-[11px] font-normal normal-case text-muted">
+                                    {tr('{n} hlasů', { n: voteCountFor(poll(), option) })}
+                                  </div>
+                                </th>
+                              )}
+                            </For>
+                            <th class="text-left font-medium px-3 py-2 whitespace-nowrap">
+                              {tr('Poznámka')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <For each={voterIds()}>
+                            {(userId) => (
+                              <tr class="border-b border-border-light last:border-b-0">
+                                <td class="px-3 py-2 sticky left-0 z-10 bg-elevated">
+                                  <div class="flex items-center gap-2">
+                                    <Show
+                                      when={
+                                        usersById().get(userId)?.pictureUrl &&
+                                        !brokenAvatars().has(userId)
+                                          ? usersById().get(userId)!.pictureUrl
+                                          : undefined
+                                      }
+                                      fallback={
+                                        <span class="w-6 h-6 rounded-full bg-secondary-light flex items-center justify-center text-muted flex-shrink-0">
+                                          <span class="icon-sm" innerHTML={ICONS['user']} />
+                                        </span>
+                                      }
+                                    >
+                                      {(pictureUrl) => (
+                                        <img
+                                          src={apiAssetUrl(pictureUrl())}
+                                          alt=""
+                                          loading="lazy"
+                                          class="w-6 h-6 rounded-full object-cover flex-shrink-0"
+                                          onError={() =>
+                                            setBrokenAvatars(prev => new Set(prev).add(userId))
+                                          }
+                                        />
+                                      )}
+                                    </Show>
+                                    <span class="text-text truncate">{userName(userId)}</span>
+                                  </div>
+                                </td>
+                                <For each={choiceOptions(poll())}>
+                                  {(option) => {
+                                    const vote = () => voteOf(poll(), userId, option.id)
                                     return (
-                                      <span class="inline-flex items-center gap-1.5 bg-50 border border-border-light rounded-full pl-0.5 pr-2 py-0.5 max-w-full">
+                                      <td class="px-3 py-2 text-center whitespace-nowrap">
                                         <Show
-                                          when={
-                                            voter()?.pictureUrl && !brokenAvatars().has(vote.userId)
-                                              ? voter()!.pictureUrl
-                                              : undefined
-                                          }
-                                          fallback={
-                                            <span class="w-5 h-5 rounded-full bg-secondary-light flex items-center justify-center text-muted flex-shrink-0">
-                                              <span class="icon-sm" innerHTML={ICONS['user']} />
-                                            </span>
-                                          }
+                                          when={vote()}
+                                          fallback={<span class="text-muted">·</span>}
                                         >
-                                          {(pictureUrl) => (
-                                            <img
-                                              src={apiAssetUrl(pictureUrl())}
-                                              alt=""
-                                              loading="lazy"
-                                              class="w-5 h-5 rounded-full object-cover flex-shrink-0"
-                                              onError={() =>
-                                                setBrokenAvatars(prev => new Set(prev).add(vote.userId))
-                                              }
-                                            />
+                                          {(v) => (
+                                            <span
+                                              classList={{
+                                                'text-success font-medium':
+                                                  option.type === 'BOOLEAN' && !!v().booleanValue,
+                                                'text-danger':
+                                                  option.type === 'BOOLEAN' && !v().booleanValue
+                                              }}
+                                            >
+                                              {option.type === 'BOOLEAN'
+                                                ? trBool(!!v().booleanValue)
+                                                : option.type === 'NUMBER'
+                                                  ? String(v().numericValue ?? '')
+                                                  : (v().stringValue ?? '')}
+                                            </span>
                                           )}
                                         </Show>
-                                        <span class="text-xs text-text truncate">{userName(vote.userId)}</span>
-                                        <Show when={voteValue(vote)}>
-                                          <span class="text-xs text-muted truncate">· {voteValue(vote)}</span>
-                                        </Show>
-                                      </span>
+                                      </td>
                                     )
                                   }}
                                 </For>
-                              </div>
-                            </Show>
-                          </div>
-                        </Show>
-                      </div>
+                                <td class="px-3 py-2 text-muted text-xs max-w-[220px]">
+                                  {notesFor(poll(), userId) || '—'}
+                                </td>
+                              </tr>
+                            )}
+                          </For>
+                        </tbody>
+                      </table>
                     </div>
-                  )}
-                </For>
-              </div>
-
-              <Show when={showResults() && poll().anonymousResults}>
-                <p class="text-xs text-muted mb-4">
-                  {tr('Anonymní anketa – jména hlasujících se nezobrazují.')}
-                </p>
+                  </div>
+                </Show>
               </Show>
 
               <Show when={canVote()}>

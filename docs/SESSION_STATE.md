@@ -252,6 +252,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - Empty “Upcoming” shows a button that switches to “Past”.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
+- **Event detail layout**: the description comes from `EventHeader`; the event link
+  (`a.event-link`, label "odkaz", link glyph) sits **directly under the description**, not
+  at the bottom. The RSVP status buttons are `px-3 py-1.5 text-sm`. Toggling "Historie
+  změn" opens the change list **inside the attendance card, directly under its header and
+  above the grouped answers** (it scrolls within `max-h-64`).
 - **Event attendance** (`EventRsvp` + `EventAttendance`):
   - Status buttons are compact and use the **event type's own captions** (`Přijdu`,
     `Omlouvám se`, `Přijdu později` on pd) instead of the built-in label map.
@@ -341,10 +346,13 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **Tým** = a table (avatar, display name, jersey number, phone, e-mail) instead of cards;
   phone hides below `md`, e-mail below `sm`, and the hidden values reappear as a second
   line under the name on phones. Broken/missing avatars fall back to the user glyph.
-- **Ankety**: the list keeps the compact summary. The detail shows the per-option bars
-  **and who voted for each option** (avatar + name + the value for TEXT/NUMBER/BOOLEAN
-  options). Votes carry only `userId`, so names come from the roster via one query that
-  merges all five `users/status/*` categories. `anonymousResults` hides the names.
+- **Ankety**: the list keeps the compact summary. The detail shows **results as a table** —
+  one row per voter (avatar + name), one column per choice option (BOOLEAN → Yes/No in
+  green/red, NUMBER → the number), and a final **Poznámka** column. The API has no
+  per-vote note field, so free-text (TEXT) options are rendered in that column instead of
+  getting their own. Columns carry the vote count. `anonymousResults` keeps the aggregate
+  bars and hides the names. Names come from the roster via one query that merges all five
+  `users/status/*` categories.
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.
@@ -466,6 +474,10 @@ smoke test confirmed:
   ("Šimon Test · Yes", "Petr Dlouhý · No", "Šimon Test · 4"). **0 console errors**.
 - Reminder from the check: the poll detail endpoint is `/polls/{id}` (plural). A stub for
   `/poll/1` silently produced "Poll not found".
+- Same session confirmed the event detail changes: the link renders as "link" with the
+  link glyph immediately after the description (`DOM` order checked), and opening "Change
+  history" places the history above the first attendance group. The poll results render as
+  a table (Member / option columns with vote counts / Note). **0 console errors**.
 
 ---
 

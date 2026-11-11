@@ -13,10 +13,10 @@ export default function EventLink(props: EventLinkProps) {
         href={props.link}
         target="_blank"
         rel="noopener noreferrer"
-        class="event-link inline-flex items-center gap-2 text-primary hover:underline text-sm"
+        class="event-link inline-flex items-center gap-2 text-primary hover:underline text-sm mb-4"
       >
-        <span class="icon" innerHTML={ICONS['chat']} />
-        {tr('Otevřít odkaz')}
+        <span class="icon" innerHTML={ICONS['link']} />
+        {tr('odkaz')}
       </a>
     </Show>
   )

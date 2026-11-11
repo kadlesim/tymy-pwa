@@ -313,6 +313,7 @@ const EN: Record<string, string> = {
   'Právě teď': 'Happening now',
   'Uzavřeno': 'Closed',
   'Otevřít odkaz': 'Open link',
+  'odkaz': 'link',
   'Předchozí měsíc': 'Previous month',
   'Následující měsíc': 'Next month',
   '+{n} další': '+{n} more',

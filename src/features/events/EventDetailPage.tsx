@@ -136,6 +136,8 @@ export default function EventDetailPage() {
                 onDelete={handleDelete}
               />
 
+              <EventLink link={event().link} />
+
               <EventRsvp
                 statusOptions={statusOptions().map(s => ({ code: s.code, caption: s.caption, color: s.color }))}
                 myStatus={myStatus() ?? undefined}
@@ -181,8 +183,6 @@ export default function EventDetailPage() {
                   onToggleHistory={() => setShowHistory(!showHistory())}
                 />
               </Show>
-
-              <EventLink link={event().link} />
             </div>
           )
         }}
