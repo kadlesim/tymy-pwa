@@ -400,20 +400,28 @@ export async function resetPassword(resetCode: string): Promise<string> {
 // Events API
 // ============================================
 
-export async function getEvents(filters?: FilterCondition[]): Promise<Event[]> {
-  let path = '/events'
-  if (filters?.length) {
-    path += `?filter=${encodeURIComponent(buildFilterString(filters))}`
-  }
-  return request<Event[]>(path)
-}
-
 export interface EventsQueryOptions {
   filters?: FilterCondition[]
   /** e.g. "startTime" or "startTime__desc" */
   order?: string
   limit?: number
   offset?: number
+}
+
+/**
+ * Lightweight event collection: the API returns events without the embedded attendance
+ * arrays here (unlike `/events/withMyAttendance`), which makes it the right source for a
+ * management table. Rights flags (`canView`, `canPlan`, `canResult`) are included.
+ */
+export async function getEvents(options: EventsQueryOptions = {}): Promise<Event[]> {
+  const params = new URLSearchParams()
+  if (options.filters?.length) params.set('filter', buildFilterString(options.filters))
+  if (options.order) params.set('order', options.order)
+  if (options.limit !== undefined) params.set('limit', String(options.limit))
+  if (options.offset !== undefined) params.set('offset', String(options.offset))
+
+  const query = params.toString()
+  return request<Event[]>(`/events${query ? `?${query}` : ''}`)
 }
 
 export async function getEventsWithMyAttendance(options: EventsQueryOptions = {}): Promise<Event[]> {

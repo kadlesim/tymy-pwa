@@ -1,3 +1,12 @@
+/** Event type code → semantic colour token (light/dark variants live in `index.css`). */
+export const EVENT_TYPE_COLORS: Record<string, string> = {
+  TRA: 'primary',
+  RUN: 'success',
+  MEE: 'info',
+  TOU: 'warning',
+  CMP: 'danger'
+}
+
 export const STATUS_COLORS: Record<string, string> = {
   YES: 'success',
   NO: 'danger',

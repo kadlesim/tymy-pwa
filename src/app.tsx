@@ -15,6 +15,7 @@ import ResetPasswordPage from './features/auth/ResetPasswordPage'
 import EventsPage from './features/events/EventsPage'
 import EventDetailPage from './features/events/EventDetailPage'
 import EventCreatePage from './features/events/EventCreatePage'
+import EventsManagePage from './features/events/EventsManagePage'
 import DiscussionsPage from './features/discussions/DiscussionsPage'
 import DiscussionDetailPage from './features/discussions/DiscussionDetailPage'
 import PollsPage from './features/polls/PollsPage'
@@ -123,9 +124,10 @@ export default function App() {
       
       <Route path="/events" component={PrivateRoute} >
         <Route path="" component={EventsPage} />
+        <Route path="/manage" component={EventsManagePage} />
+        <Route path="/create" component={EventCreatePage} />
         <Route path="/:id" component={EventDetailPage} />
         <Route path="/:id/edit" component={EventCreatePage} />
-        <Route path="/create" component={EventCreatePage} />
       </Route>
       
       <Route path="/discussions" component={PrivateRoute} >

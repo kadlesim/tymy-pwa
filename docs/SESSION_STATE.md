@@ -18,7 +18,8 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 - Sections: Události, Chat, Ankety, Tým, Soubory, Reporty, Profil.
 - **Events**: list (closest first, `order=startTime__asc`), month grid, "Nevyplněná
   docházka" tab with count, detail with icon-only edit/delete, RSVP + note, attendance
-  grouped by answer (§5).
+  grouped by answer (§5). Management page at `/events/manage` (bulk delete + series
+  builder, §5).
 - **Chat**: bottom composer, newest at the bottom, older pages on scroll-up, per-message
   hover menu (react/copy/edit/pin/delete) with server-mirroring rights.
 - **Chat view is intentionally borderless**; **UI is neutral grey**, tight radii, MDI Light
@@ -37,8 +38,9 @@ project is Git-connected).
 
 **Next likely tasks** (see §7 for the full list): verify the remaining write
 endpoints (`POST /polls/{id}/votes`, `PUT /user/{id}`, `POST /user/{id}/avatar`,
-`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`), then a real login on the
-live deployment (writes have only been exercised against dev/pd locally).
+`POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`) — the new
+`/events/manage` page calls `POST /events/create` (array) and `DELETE /event/{id}`, but
+neither has been run against a live team yet — then a real login on the live deployment.
 
 ---
 
@@ -165,6 +167,7 @@ src/
 ├── features/
 │   ├── auth/           TeamPage, Login, Register, ForgotPassword, ResetPassword
 │   ├── events/         EventsPage, EventDetailPage, EventCreatePage (also edit),
+│   │                   EventsManagePage (bulk, `/events/manage`),
 │   │                   EventMonthView, EventHeader, EventRsvp, EventAttendance,
 │   │                   EventLink, constants
 │   ├── discussions/    DiscussionsPage, DiscussionDetailPage, ChatMessage
@@ -187,6 +190,17 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 
 ## 5. Behaviour decisions worth remembering
 
+- **Event management** (`/events/manage`, `EventsManagePage`): the PWA counterpart of the
+  legacy `/setting/event` screen. Year + type + text filters over `GET /events` — the
+  lightweight collection, which embeds no attendance — shown as a row table with
+  checkboxes and per-row edit/delete icons. Multi-select delete calls `DELETE /event/{id}`
+  per row and aggregates the results with `Promise.allSettled`; rows are selectable only
+  when `canPlan`/`canPlanOthers` is set, and the server still enforces `SYS:EVE_DELETE`.
+  Below the table sits a **series builder**: caption/type/place/link/description, weekday
+  chips, date range, start time, duration and close offset; it previews the generated
+  dates and posts an **array** to `POST /events/create` (the endpoint is natively bulk)
+  with a 200-event cap. The events page links to it via "Správa" next to "Nová událost",
+  and `/events/create` is now reachable from there too.
 - **Events list = one server query per tab:**
   - Upcoming: `startTime >= now`, order `startTime__asc` (closest first)
   - Pending attendance ("Nevyplněná docházka"): `endTime >= now`, order `startTime__asc`,
@@ -194,9 +208,12 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     count. Its query runs independently so the badge is right on every tab.
   - Past: `endTime < now`, order `startTime__desc`, **limit 40**
   - Empty “Upcoming” shows a button that switches to “Past”.
-- **Events view switch**: list (grouped by day, closest to now first) or a Google-Calendar
-  style month grid (`EventMonthView`) with month navigation, today highlighted and event
-  pills that open `/events/:id`. The grid queries the visible month only.
+- **Events view switch**: a two-item segmented control with icon + label
+  ("Seznam" / "Kalendář") whose active half is filled with `--color-primary` (it carries a
+  text label, so the "filled buttons need a label" rule still holds). The views: list
+  (grouped by day, closest to now first) or a Google-Calendar style month grid
+  (`EventMonthView`) with month navigation, today highlighted and event pills that open
+  `/events/:id`. The grid queries the visible month only.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
 - **Event attendance** (`EventRsvp` + `EventAttendance`):
@@ -352,6 +369,18 @@ smoke test confirmed:
 - Not yet exercised on the live host: login and any write (only the read-only probes above
   were run from here).
 
+### 2026-11-11 — event management page (mock-verified)
+
+- `/events/manage` and the reworked events header were rendered in headless Edge against a
+  **mocked API** (fetch override injected before boot, session seeded in `localStorage`) —
+  no real team data touched. Checked at 1280×900 and 390×844: table, selection bar
+  ("Vybráno 2" → "Smazat vybrané (2)"), series builder (9 Wednesdays previewed) and the
+  events header ("Správa", "Nová událost", "Seznam"/"Kalendář") all render; select
+  bindings resolve to `2026` / `all`; **0 console errors**.
+- Fixed during the check: the search field's magnifier overlapped the placeholder because
+  `.input` (defined after `@tailwind utilities`) overrides `pl-8` — padding is now inline.
+- Not exercised: the actual `POST /events/create` and `DELETE /event/{id}` calls (mock only).
+
 ---
 
 ## 7. Open items / next steps (priority order)
@@ -359,6 +388,9 @@ smoke test confirmed:
 1. **Verify write endpoints** with one real action each (currently docs-based only):
    `POST /polls/{id}/votes`, `PUT /user/{id}`,
    `POST /user/{id}/avatar`, `POST /events/create`, `PUT /event/{id}`, `DELETE /event/{id}`.
+   The new `/events/manage` page exercises `POST /events/create` (array body) and
+   `DELETE /event/{id}`, so a series of one throwaway event plus its deletion is now a
+   single-screen check — do it on dev, not on pd.
    `POST /attendance` is **verified** (200, returns the saved record; a note written on pd
    survived a reload).
    Discussion writes are **done**: `POST /discussions/{id}/post` (201),

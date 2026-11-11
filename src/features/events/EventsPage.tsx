@@ -2,7 +2,7 @@
 // pending-attendance tab and optimistic RSVP.
 
 import { createSignal, createMemo, For, Show } from 'solid-js'
-import { useNavigate } from '@solidjs/router'
+import { A, useNavigate } from '@solidjs/router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/solid-query'
 import {
   getEventsWithMyAttendance,
@@ -222,8 +222,21 @@ export default function EventsPage() {
 
   return (
     <div class="events-page">
-      <div class="mb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <h1 class="text-xl font-semibold text-text">{tEvents('title')}</h1>
+      <div class="mb-4 flex flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h1 class="text-xl font-semibold text-text">{tEvents('title')}</h1>
+
+          <div class="flex items-center gap-2">
+            <A href="/events/manage" class="btn btn-secondary">
+              <span class="icon-sm" innerHTML={ICONS['settings']} />
+              Správa
+            </A>
+            <A href="/events/create" class="btn btn-primary">
+              <span class="icon-sm" innerHTML={ICONS['plus']} />
+              Nová událost
+            </A>
+          </div>
+        </div>
 
         <div class="flex flex-wrap items-center gap-2">
           <div class="flex gap-1 bg-100 rounded-lg p-1" role="tablist">
@@ -263,29 +276,29 @@ export default function EventsPage() {
           <div class="flex gap-1 bg-100 rounded-lg p-1" role="group" aria-label="Zobrazení">
             <button
               type="button"
-              class="px-2 py-1.5 rounded-md"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               classList={{
-                'bg-white text-primary shadow-sm': view() === 'list',
-                'text-text-secondary hover:text-text': view() !== 'list'
+                'bg-primary text-white shadow-sm': view() === 'list',
+                'text-text-secondary hover:text-text hover:bg-200': view() !== 'list'
               }}
               aria-pressed={view() === 'list'}
               onClick={() => setView('list')}
-              title="Seznam"
             >
-              <span class="icon-sm" innerHTML={ICONS['list']} />
+              <span class="icon" innerHTML={ICONS['list']} />
+              Seznam
             </button>
             <button
               type="button"
-              class="px-2 py-1.5 rounded-md"
+              class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors"
               classList={{
-                'bg-white text-primary shadow-sm': view() === 'month',
-                'text-text-secondary hover:text-text': view() !== 'month'
+                'bg-primary text-white shadow-sm': view() === 'month',
+                'text-text-secondary hover:text-text hover:bg-200': view() !== 'month'
               }}
               aria-pressed={view() === 'month'}
               onClick={() => setView('month')}
-              title="Kalendář"
             >
-              <span class="icon-sm" innerHTML={ICONS['calendar']} />
+              <span class="icon" innerHTML={ICONS['calendar']} />
+              Kalendář
             </button>
           </div>
 
