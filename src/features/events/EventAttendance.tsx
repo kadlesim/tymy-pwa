@@ -108,11 +108,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
   return (
     <Show when={props.attendance.length > 0}>
       <div class="event-attendance bg-elevated rounded-xl border border-border overflow-hidden mb-4">
-        <div class="p-4 border-b border-border flex items-center justify-between gap-2">
-          <h2 class="text-lg font-semibold text-text flex items-center gap-2">
-            <span class="icon" innerHTML={ICONS['users']} />
-            {tr('Účast')}
-          </h2>
+        <div class="px-3 py-2 border-b border-border flex items-center justify-end gap-2">
           <button class="btn btn-secondary text-sm" onClick={props.onToggleHistory}>
             {props.showHistory ? tr('Skrýt historii') : tr('Historie změn')}
           </button>

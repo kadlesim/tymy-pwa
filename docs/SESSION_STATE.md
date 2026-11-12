@@ -280,8 +280,8 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   attendance card, directly under its header and above the grouped answers** (it scrolls
   within `max-h-64`).
 - **Event attendance** (`EventRsvp` + `EventAttendance`):
-  - The attendance card header says just "Účast" — the total was removed; each answer
-    group shows its own count as a prominent pill (`text-sm font-semibold`, `bg-200`).
+  - The attendance card has **no title** — only a compact right-aligned bar with the
+    "Historie změn" toggle; each answer group carries its own count as a prominent pill.
   - Status buttons are compact and use the **event type's own captions** (`Přijdu`,
     `Omlouvám se`, `Přijdu později` on pd) instead of the built-in label map.
   - The note lives in `attendance.preDescription` and is saved with `POST /attendance`
@@ -324,6 +324,10 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     `POST|DELETE /discussions/{id}/post/{postId}/react` (body = bare JSON string) is sent
     and the cache invalidated on error. Existing reactions render as badges under the
     message and toggle on click.
+  - **Reaction emoji must be a single code point**: the server silently ignores anything
+    with `mb_strlen($reaction) !== 1`, so the picker's ❤️ (U+2764 + VS16) is normalised to
+    ❤ (U+2764) before sending and when matching the stored key; badges re-add the selector
+    for display. Multi-codepoint emoji (ZWJ sequences) will never be stored.
   - Editing swaps the bubble for a textarea holding the raw BBCode (Uložit / Zrušit).
   - Enter sends, Shift+Enter inserts a newline; BBCode toolbar above the composer
     (the client-side preview toggle was removed on request).
@@ -559,8 +563,12 @@ smoke test confirmed:
 - Events list/detail polish (headless Edge, light + dark): the list groups by month
   ("listopad 2026" / "November 2026"), each card shows the day-of-month tile and only the
   time range; the detail shows the bordered date/place panel, the shortened link
-  ("example.com/event") right under it, "Účast" without a total and prominent per-group
+  ("example.com/event") right under it, no attendance heading and prominent per-group
   count pills. Dark bottom-nav/drawer glyphs are lighter. **0 console errors.**
+- Reaction fix verified against dev: `POST /discussions/2/post/{id}/react` with `"❤"`
+  (U+2764) stored `{"❤":[31]}` and `DELETE` removed it — the picker's old `"❤️"` was
+  silently ignored by the server (`mb_strlen !== 1`). Mobile bottom bar: after scrolling to
+  the end it carries `translate-y-full`, scrolling up removes it. **0 console errors.**
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.
@@ -715,6 +723,9 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   there is no server read state — the bell derives unread itself.
 - **The VAPID public key is global** (`BNFw…`); the private key stays server-side. If the key
   changes, every subscription must be recreated.
+- **The app scrolls the document, not `.app-main`** (the element grows with its content),
+  so scroll-driven UI listens to `window`. The mobile bottom bar hides on down-scroll
+  (> 8 px) and returns on up-scroll; it resets on route change.
 - **The Vite dev server has no service worker** (VitePWA `devOptions` are off), so push shows
   `no-sw` / "notifications are not available in this environment". Test with
   `npm run build && npm run preview` or the deployment. Firefox's permission popup does not

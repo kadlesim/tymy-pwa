@@ -26,6 +26,17 @@ import { ICONS } from '../../lib/icons'
 /** Emoji offered in the picker (the legacy app has a huge picker; this is enough). */
 const REACTIONS = ['👍', '❤️', '😂', '😮', '😢', '🎉', '👏', '🔥']
 
+/**
+ * The server stores only single-code-point reactions (`mb_strlen($reaction) !== 1` is
+ * silently ignored), so the heart must be sent as U+2764 without the emoji variation
+ * selector — otherwise the optimistic reaction disappears after the next refetch.
+ */
+const normalizeReaction = (emoji: string): string => emoji.replace(/\uFE0F/g, '')
+
+/** Display form: the stored heart is text-presentation, so re-add the selector. */
+const displayReaction = (emoji: string): string =>
+  normalizeReaction(emoji) === '❤' ? '❤️' : emoji
+
 export const authorName = (post: DiscussionPost): string =>
   post.createdBy?.callName ||
   post.createdBy?.displayName ||
@@ -85,7 +96,10 @@ export default function ChatMessage(props: ChatMessageProps) {
   const reactions = () => Object.entries(props.post.reactions ?? {}) as [string, number[]][]
   const iReacted = (emoji: string) => {
     const id = meId()
-    return id !== null && (props.post.reactions?.[emoji] ?? []).includes(id)
+    if (id === null) return false
+    const target = normalizeReaction(emoji)
+    const entry = reactions().find(([key]) => normalizeReaction(key) === target)
+    return entry ? entry[1].includes(id) : false
   }
 
   const invalidate = () => {
@@ -144,19 +158,21 @@ export default function ChatMessage(props: ChatMessageProps) {
   const toggleReaction = (emoji: string) => {
     const id = meId()
     if (id === null) return
-    const remove = iReacted(emoji)
+    // Normalise before every use — the server key and our picker key must match.
+    const target = normalizeReaction(emoji)
+    const remove = iReacted(target)
 
     patchPost(queryClient, props.discussionId, props.post.id, post => {
       const reactionsMap = { ...(post.reactions ?? {}) }
-      const users = new Set(reactionsMap[emoji] ?? [])
+      const users = new Set(reactionsMap[target] ?? [])
       if (remove) users.delete(id)
       else users.add(id)
-      if (users.size > 0) reactionsMap[emoji] = [...users]
-      else delete reactionsMap[emoji]
+      if (users.size > 0) reactionsMap[target] = [...users]
+      else delete reactionsMap[target]
       return { ...post, reactions: reactionsMap }
     })
 
-    reactMutation.mutate({ emoji, remove })
+    reactMutation.mutate({ emoji: target, remove })
   }
 
   const copyMessage = async () => {
@@ -388,7 +404,7 @@ export default function ChatMessage(props: ChatMessageProps) {
                   title={iReacted(emoji) ? tr('Zrušit reakci') : tr('Reagovat')}
                   onClick={() => toggleReaction(emoji)}
                 >
-                  <span class="text-sm leading-none">{emoji}</span>
+                  <span class="text-sm leading-none">{displayReaction(emoji)}</span>
                   <Show when={users.length > 1}>
                     <span class="text-[11px]">{users.length}</span>
                   </Show>

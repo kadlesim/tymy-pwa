@@ -387,7 +387,7 @@ export default function EventsPage() {
                     <div>
                       <div class="flex items-center gap-3 mb-3">
                         <div class="flex-1 h-px bg-border" />
-                        <span class="text-sm font-medium text-text-secondary px-3">{group.date}</span>
+                        <span class="text-base font-semibold text-text px-3">{group.date}</span>
                         <div class="flex-1 h-px bg-border" />
                       </div>
 

@@ -1,6 +1,6 @@
 ﻿// Main layout with header, bottom navigation, and responsive sidebar
 
-import { createSignal, createMemo, createEffect, onCleanup } from 'solid-js'
+import { createSignal, createMemo, createEffect, onCleanup, onMount } from 'solid-js'
 import { useLocation, useNavigate, A } from '@solidjs/router'
 import { useAuth, doLogout, getDisplayName, getUserAvatar } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
@@ -40,6 +40,31 @@ export default function Layout(props: LayoutProps) {
   const { tAuth } = useCommonCaptions()
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
   const [userMenuOpen, setUserMenuOpen] = createSignal(false)
+  const [navHidden, setNavHidden] = createSignal(false)
+
+  // Mobile bottom bar hides while scrolling down and comes back on scroll up.
+  // The document scrolls (`.app-main` grows with its content), not the <main> element.
+  let lastScrollTop = 0
+  let scrollTicking = false
+
+  const handleMainScroll = () => {
+    if (scrollTicking) return
+    scrollTicking = true
+    requestAnimationFrame(() => {
+      const top = window.scrollY || document.documentElement.scrollTop
+      const delta = top - lastScrollTop
+      if (top <= 24) setNavHidden(false)
+      else if (delta > 8) setNavHidden(true)
+      else if (delta < -8) setNavHidden(false)
+      lastScrollTop = top
+      scrollTicking = false
+    })
+  }
+
+  onMount(() => {
+    window.addEventListener('scroll', handleMainScroll, { passive: true })
+    onCleanup(() => window.removeEventListener('scroll', handleMainScroll))
+  })
 
   // Every authenticated team member can reach these core sections.
   // Fine-grained permissions (canPlan, canWrite, …) are enforced per action.
@@ -49,6 +74,8 @@ export default function Layout(props: LayoutProps) {
   createEffect(() => {
     location.pathname
     setSidebarOpen(false)
+    setNavHidden(false)
+    lastScrollTop = window.scrollY || document.documentElement.scrollTop
   })
 
   const handleClickOutside = (e: MouseEvent) => {
@@ -383,8 +410,13 @@ export default function Layout(props: LayoutProps) {
         <div class="container py-4">{props.children}</div>
       </main>
 
-      {/* Bottom navigation (mobile) */}
-      <nav class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden" role="navigation" aria-label={tr('Hlavní navigace')}>
+      {/* Bottom navigation (mobile) — slides away while scrolling down. */}
+      <nav
+        class="bottom-nav fixed bottom-0 left-0 right-0 z-40 bg-elevated border-t border-border h-[var(--bottom-nav-height)] md:hidden transition-transform duration-200 ease-out"
+        classList={{ 'translate-y-full': navHidden() }}
+        role="navigation"
+        aria-label={tr('Hlavní navigace')}
+      >
         <ul class="flex h-full items-stretch justify-around" role="list">
           {bottomNavItems().map(item => (
             <li class="flex-1 min-w-0">
