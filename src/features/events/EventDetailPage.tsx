@@ -61,7 +61,27 @@ export default function EventDetailPage() {
           preDescription: ''
         }
       ]),
-    onSuccess: () => {
+    onSuccess: (_data, status) => {
+      // Keep the shared pending-attendance list in sync: the detail page unmounts the
+      // events page, and its cached "Nevyplněná docházka" badge must reflect the answer.
+      const PENDING_KEY = queryKeys.eventsWithAttendance('pending')
+      queryClient.setQueryData<Event[]>(PENDING_KEY, old =>
+        old?.map(event =>
+          event.id === eventId()
+            ? {
+                ...event,
+                myAttendance: {
+                  userId: auth().user?.id ?? 0,
+                  eventId: eventId(),
+                  preStatus: status,
+                  preDescription: '',
+                  preUserMod: 0,
+                  preDatMod: new Date().toISOString()
+                }
+              }
+            : event
+        )
+      )
       queryClient.invalidateQueries({ queryKey: queryKeys.event(eventId()) })
       invalidateEvents()
       eventQuery.refetch()

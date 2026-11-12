@@ -389,17 +389,21 @@ export default function Layout(props: LayoutProps) {
             </div>
 
             <div class="mt-auto pt-4 border-t border-border">
-              <div class="px-3 py-2 flex items-center gap-3">
+              <A
+                href="/profile"
+                class="px-3 py-2 flex items-center gap-3 rounded-lg hover:bg-100"
+                onClick={() => setSidebarOpen(false)}
+              >
                 <img
                   src={getUserAvatar()}
                   alt=""
-                  class="w-10 h-10 rounded-full object-cover border border-border"
+                  class="w-10 h-10 rounded-full object-cover border border-border flex-shrink-0"
                 />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-text truncate">{getDisplayName()}</p>
-                  <p class="text-xs text-muted truncate">{auth().user?.roles.join(', ')}</p>
-                </div>
-              </div>
+                <span class="flex-1 min-w-0 text-sm font-medium text-text truncate">
+                  {getDisplayName()}
+                </span>
+                <span class="icon-sm text-muted flex-shrink-0" innerHTML={ICONS['chevronRight']} />
+              </A>
             </div>
           </nav>
         </div>

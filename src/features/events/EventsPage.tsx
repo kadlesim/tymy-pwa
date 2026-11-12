@@ -18,7 +18,7 @@ import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { useAuth } from '../../lib/auth'
 import { lang } from '../../lib/prefs'
-import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
+import { formatDisplayDate, formatDisplayTime, formatWeekdayShort, getEventStatus } from '../../lib/date-filters'
 import { ICONS } from '../../lib/icons'
 import { STATUS_COLORS } from './constants'
 import { attendanceCaption, eventTypeCaption } from '../../lib/event-labels'
@@ -68,6 +68,7 @@ export default function EventsPage() {
     queryKey: queryKeys.eventsWithAttendance(tab() === 'pending' ? 'pending' : tab()),
     queryFn: () => getEventsWithMyAttendance(listQueryOptions()),
     staleTime: 1000 * 60 * 2,
+    refetchOnMount: 'always',
     enabled: tab() !== 'pending'
   }))
 
@@ -81,6 +82,7 @@ export default function EventsPage() {
         limit: 100
       }),
     staleTime: 1000 * 60 * 2,
+    refetchOnMount: 'always',
     enabled: tab() === 'pending' || auth().user !== null
   }))
 
@@ -446,8 +448,11 @@ function EventCard(props: EventCardProps) {
             class="flex-shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center"
             style={`background-color: var(--color-${color()}-light); color: ${dayColor()}`}
           >
-            <span class="text-xl font-semibold leading-none">
+            <span class="text-lg font-semibold leading-none">
               {new Date(props.event.startTime).getDate()}
+            </span>
+            <span class="text-[10px] font-medium uppercase tracking-wide opacity-80 mt-0.5">
+              {formatWeekdayShort(props.event.startTime)}
             </span>
           </div>
 

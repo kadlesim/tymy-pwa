@@ -258,11 +258,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   to now first) and a Google-Calendar style month grid (`EventMonthView`) with month
   navigation, today highlighted and event pills that open `/events/:id`; the grid queries
   the visible month only.
-- **List cards** show the **day of month** in the coloured tile (no glyph), the time range
-  and place underneath; the month comes from the divider ("listopad 2026" — pass
-  `day: undefined` to `formatDisplayDate`, otherwise its default day stays in the label).
-  The tile's number uses `--color-text` for the grey `primary` tone, otherwise the tone
-  colour (the grey tone is invisible on the dark tile).
+- **List cards** show the **day of month** with a two-letter weekday below it (localised:
+  `Po` / `Mo`), the time range and place underneath; the month comes from the divider
+  ("listopad 2026" — pass `day: undefined` to `formatDisplayDate`, otherwise its default day
+  stays in the label). The tile's number uses `--color-text` for the grey `primary` tone,
+  otherwise the tone colour (the grey tone is invisible on the dark tile).
 - **Events list = one server query per tab:**
   - Upcoming: `startTime >= now`, order `startTime__asc` (closest first)
   - Pending attendance ("Nevyplněná docházka"): `endTime >= now`, order `startTime__asc`,
@@ -270,6 +270,10 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     count. Its query runs independently so the badge is right on every tab.
   - Past: `endTime < now`, order `startTime__desc`, **limit 40**
   - Empty “Upcoming” shows a button that switches to “Past”.
+  - The pending badge stays correct after an RSVP on the **detail** page: that mutation
+    patches the shared `eventsWithAttendance('pending')` cache, and both list queries use
+    `refetchOnMount: 'always'` — the global default is `false`, so inactive queries would
+    otherwise render stale when returning from a detail page.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
 - **Event detail layout**: `EventHeader` renders a bordered info panel with the date/time
@@ -363,7 +367,8 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     an expiry mid-session lands on the login screen instead of erroring on every page.
 - **Sections**: Události, Chat, Ankety, Tým, Soubory, Reporty, Profil. Only the five
   with `primary: true` are shown in the mobile bottom bar; the other two live in the
-  drawer (7 items would not fit at 390 px).
+  drawer (7 items would not fit at 390 px). The drawer footer is avatar + display name as a
+  link to `/profile` (closes the drawer); the roles line was removed.
 - **Reporty** = the legacy "Report docházky": a players × events matrix from
   `events/withMyAttendance` + `users/status/{category}`, with three filters — **date range**
   (defaults to Jan 1 – Dec 31 of the newest event's year), **event type** (client-side on
@@ -569,6 +574,9 @@ smoke test confirmed:
   (U+2764) stored `{"❤":[31]}` and `DELETE` removed it — the picker's old `"❤️"` was
   silently ignored by the server (`mb_strlen !== 1`). Mobile bottom bar: after scrolling to
   the end it carries `translate-y-full`, scrolling up removes it. **0 console errors.**
+- RSVP regression check (headless, mocked stateful API): pending badge showed 1, an RSVP on
+  `/events/1` (SPA navigation, then back) dropped it to 0. Events list shows day + two-letter
+  weekday; drawer footer is the profile link without roles. **0 console errors.**
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.
@@ -723,6 +731,10 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
   there is no server read state — the bell derives unread itself.
 - **The VAPID public key is global** (`BNFw…`); the private key stays server-side. If the key
   changes, every subscription must be recreated.
+- **Inactive queries are not refetched by `invalidateQueries`, and the QueryClient sets
+  `refetchOnMount: false`** — an RSVP on a detail page left the cached pending badge stale.
+  Patch shared caches inside the mutation and set `refetchOnMount: 'always'` on list queries
+  that must reflect changes made elsewhere.
 - **The app scrolls the document, not `.app-main`** (the element grows with its content),
   so scroll-driven UI listens to `window`. The mobile bottom bar hides on down-scroll
   (> 8 px) and returns on up-scroll; it resets on route change.

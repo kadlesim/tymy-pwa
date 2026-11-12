@@ -178,6 +178,15 @@ export function formatDisplayTime(date: Date | string): string {
   })
 }
 
+/** Two-letter weekday ("Po" / "Mo") for compact date tiles. */
+export function formatWeekdayShort(date: Date | string): string {
+  const d = typeof date === 'string' ? parseApiDate(date) : date
+  const labels = getLocale().startsWith('cs')
+    ? ['Ne', 'Po', 'Út', 'St', 'Čt', 'Pá', 'So']
+    : ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+  return labels[d.getDay()] ?? ''
+}
+
 /**
  * Format date and time for display
  */
