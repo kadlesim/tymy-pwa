@@ -254,10 +254,15 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   posts, status captions) stays in the team's language.
 - **Events view switch**: icons only (list / calendar), 24 px glyphs in 40 px square
   buttons; the active half is filled with `--color-primary`. Accessible names come from
-  `aria-label`/`title` (no visible text). The views are the list (grouped by day, closest
+  `aria-label`/`title` (no visible text). The views are the list (grouped by **month**, closest
   to now first) and a Google-Calendar style month grid (`EventMonthView`) with month
   navigation, today highlighted and event pills that open `/events/:id`; the grid queries
   the visible month only.
+- **List cards** show the **day of month** in the coloured tile (no glyph), the time range
+  and place underneath; the month comes from the divider ("listopad 2026" — pass
+  `day: undefined` to `formatDisplayDate`, otherwise its default day stays in the label).
+  The tile's number uses `--color-text` for the grey `primary` tone, otherwise the tone
+  colour (the grey tone is invisible on the dark tile).
 - **Events list = one server query per tab:**
   - Upcoming: `startTime >= now`, order `startTime__asc` (closest first)
   - Pending attendance ("Nevyplněná docházka"): `endTime >= now`, order `startTime__asc`,
@@ -267,12 +272,16 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - Empty “Upcoming” shows a button that switches to “Past”.
 - **Event detail actions** are icon-only (pencil = `/events/:id/edit`, trash = delete) and
   only rendered when `event.canPlan` and `canPlan`/`canPlanOthers` allow it.
-- **Event detail layout**: the description comes from `EventHeader`; the event link
-  (`a.event-link`, label "odkaz", link glyph) sits **directly under the description**, not
-  at the bottom. The RSVP status buttons are `px-3 py-1.5 text-sm`. Toggling "Historie
-  změn" opens the change list **inside the attendance card, directly under its header and
-  above the grouped answers** (it scrolls within `max-h-64`).
+- **Event detail layout**: `EventHeader` renders a bordered info panel with the date/time
+  and place in `text-base` (calendar + map-marker glyphs), and the **event link directly
+  under it** (`a.event-link`): the visible text is the shortened URL (host + path, no
+  scheme, truncated, full URL in `title`), link glyph only. The RSVP status buttons are
+  `px-3 py-1.5 text-sm`. Toggling "Historie změn" opens the change list **inside the
+  attendance card, directly under its header and above the grouped answers** (it scrolls
+  within `max-h-64`).
 - **Event attendance** (`EventRsvp` + `EventAttendance`):
+  - The attendance card header says just "Účast" — the total was removed; each answer
+    group shows its own count as a prominent pill (`text-sm font-semibold`, `bg-200`).
   - Status buttons are compact and use the **event type's own captions** (`Přijdu`,
     `Omlouvám se`, `Přijdu později` on pd) instead of the built-in label map.
   - The note lives in `attendance.preDescription` and is saved with `POST /attendance`
@@ -547,6 +556,11 @@ smoke test confirmed:
   reports "not available in this environment". The deployed notification build was verified:
   `/sw.js` contains `importScripts("/push-sw.js")` and `/push-sw.js` answers 200
   `application/javascript`.
+- Events list/detail polish (headless Edge, light + dark): the list groups by month
+  ("listopad 2026" / "November 2026"), each card shows the day-of-month tile and only the
+  time range; the detail shows the bordered date/place panel, the shortened link
+  ("example.com/event") right under it, "Účast" without a total and prominent per-group
+  count pills. Dark bottom-nav/drawer glyphs are lighter. **0 console errors.**
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.
@@ -688,6 +702,10 @@ npm run icons      # regenerate PWA icons + favicons from logo2.png (sharp)
 - **Two icons must stay opaque**: `maskable-512.png` (Android masks it against the
   launcher) and `apple-touch-icon.png` (iOS composites transparency onto black). The other
   icons, shortcuts and favicons keep the logo's transparency on purpose.
+- **`formatDisplayDate` merges its defaults with the options**, so `day: '2-digit'` survives
+  unless you pass `day: undefined` — month-only labels (list dividers) need it explicitly.
+- **The grey `primary` event tone is unreadable on dark tiles**; the day number uses
+  `--color-text` for that tone and the tone colour for the coloured ones.
 - **A service worker cannot read `localStorage`** — create the push subscription from the
   page and POST it through the API client (`X-Session-Key`). The SW only renders pushes.
 - **Web Push handlers are merged via `workbox.importScripts`** (`public/push-sw.js`); keep

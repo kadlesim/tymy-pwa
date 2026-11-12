@@ -27,14 +27,6 @@ import EventMonthView from './EventMonthView'
 type EventTab = 'upcoming' | 'past' | 'pending'
 type EventsView = 'list' | 'month'
 
-const TYPE_ICON: Record<string, string> = {
-  TRA: 'calendar',
-  RUN: 'calendar',
-  MEE: 'calendar',
-  TOU: 'calendar',
-  CMP: 'calendar'
-}
-
 const TYPE_COLOR: Record<string, string> = {
   TRA: 'primary',
   RUN: 'success',
@@ -212,7 +204,12 @@ export default function EventsPage() {
   const groupedEvents = createMemo(() => {
     const groups = new Map<string, Event[]>()
     for (const event of filteredEvents()) {
-      const key = formatDisplayDate(event.startTime, { weekday: 'long', day: 'numeric', month: 'long' })
+      // Monthly dividers — the card itself shows the day and time.
+      const key = formatDisplayDate(event.startTime, {
+        day: undefined,
+        month: 'long',
+        year: 'numeric'
+      })
       const arr = groups.get(key) ?? []
       arr.push(event)
       groups.set(key, arr)
@@ -433,6 +430,9 @@ function EventCard(props: EventCardProps) {
   const status = () => getEventStatus(props.event)
   const canRsvp = () => status() !== 'past' && props.statusOptions.length > 0
   const color = () => TYPE_COLOR[props.event.type] || 'primary'
+  // The grey (primary) tone is too dark for the day number in dark mode.
+  const dayColor = () =>
+    color() === 'primary' ? 'var(--color-text)' : `var(--color-${color()})`
   const myStatus = () => props.myStatus
 
   return (
@@ -443,10 +443,12 @@ function EventCard(props: EventCardProps) {
       <div class="p-4">
         <div class="flex items-start gap-3">
           <div
-            class="flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center"
-            style={`background-color: var(--color-${color()}-light)`}
+            class="flex-shrink-0 w-12 h-12 rounded-lg flex flex-col items-center justify-center"
+            style={`background-color: var(--color-${color()}-light); color: ${dayColor()}`}
           >
-            <span class="icon-28" style={`color: var(--color-${color()})`} innerHTML={ICONS[TYPE_ICON[props.event.type] || 'calendar']} />
+            <span class="text-xl font-semibold leading-none">
+              {new Date(props.event.startTime).getDate()}
+            </span>
           </div>
 
           <div class="flex-1 min-w-0">
@@ -455,7 +457,7 @@ function EventCard(props: EventCardProps) {
                 <h3 class="font-semibold text-text truncate">{props.event.caption}</h3>
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-sm text-muted">
                   <span>
-                    {formatDisplayDate(props.event.startTime)} {formatDisplayTime(props.event.startTime)}–{formatDisplayTime(props.event.endTime)}
+                    {formatDisplayTime(props.event.startTime)}–{formatDisplayTime(props.event.endTime)}
                   </span>
                   <Show when={props.event.place}>
                     <span>• {props.event.place}</span>

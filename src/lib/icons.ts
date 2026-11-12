@@ -41,6 +41,7 @@ import {
   mdilLock,
   mdilLogout,
   mdilMagnify,
+  mdilMapMarker,
   mdilMenu,
   mdilMessageText,
   mdilPaperclip,
@@ -81,6 +82,7 @@ export const ICONS: Record<string, string> = {
   bell: icon(mdilBell),
   settings: icon(mdilSettings),
   logout: icon(mdilLogout),
+  location: icon(mdilMapMarker),
 
   // Chat
   send: icon(mdilUpload),

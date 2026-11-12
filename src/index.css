@@ -182,6 +182,13 @@ html[data-text-size='large'] {
   color: #f1f3f5 !important;
 }
 
+/* Navigation glyphs are the main affordance on phones — keep them brighter than the
+   secondary text in dark mode (inactive items included). */
+.dark .sidebar .nav-item .icon,
+.dark .bottom-nav .bottom-nav-item .icon {
+  color: #dfe4e9;
+}
+
 /* Reset & Base */
 *, *::before, *::after {
   box-sizing: border-box;

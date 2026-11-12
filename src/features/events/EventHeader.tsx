@@ -4,6 +4,7 @@ import { tr } from '../../lib/i18n'
 import { eventTypeCaption } from '../../lib/event-labels'
 import { formatDisplayDate, formatDisplayTime, getEventStatus } from '../../lib/date-filters'
 import type { Event } from '../../lib/api'
+import EventLink from './EventLink'
 
 const TYPE_COLORS: Record<string, string> = {
   TRA: 'primary',
@@ -33,6 +34,8 @@ export interface EventHeaderProps {
 
 export default function EventHeader(props: EventHeaderProps) {
   const color = () => TYPE_COLORS[props.event.type] || 'primary'
+  const iconColor = () =>
+    color() === 'primary' ? 'var(--color-text)' : `var(--color-${color()})`
   const status = () => getEventStatus(props.event)
   const canEdit = () => props.canPlan && (props.event.canPlan || props.event.canPlanOthers)
 
@@ -45,7 +48,7 @@ export default function EventHeader(props: EventHeaderProps) {
               class="w-11 h-11 rounded-lg flex items-center justify-center flex-shrink-0"
               style={`background-color: var(--color-${color()}-light)`}
             >
-              <span class="icon" style={`color: var(--color-${color()})`} innerHTML={ICONS['calendar']} />
+              <span class="icon" style={`color: ${iconColor()}`} innerHTML={ICONS['calendar']} />
             </span>
             <div class="min-w-0">
               <h1 class="text-2xl font-bold text-text">{props.event.caption}</h1>
@@ -58,20 +61,26 @@ export default function EventHeader(props: EventHeaderProps) {
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-4 text-sm text-muted mt-3">
-            <span class="flex items-center gap-1.5">
-              <span class="icon" innerHTML={ICONS['calendar']} />
-              {formatDisplayDate(props.event.startTime, { weekday: 'long' })},{' '}
-              {formatDisplayTime(props.event.startTime)}–{formatDisplayTime(props.event.endTime)}
+          <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border-light bg-50 px-3.5 py-2.5 text-base">
+            <span class="flex items-center gap-2">
+              <span class="icon text-muted" innerHTML={ICONS['calendar']} />
+              <span class="font-semibold text-text">
+                {formatDisplayDate(props.event.startTime, { weekday: 'long' })}
+              </span>
+              <span class="text-text-secondary">
+                {formatDisplayTime(props.event.startTime)}–{formatDisplayTime(props.event.endTime)}
+              </span>
             </span>
             <Show when={props.event.place}>
-              <span class="flex items-center gap-1.5">
-                <span class="icon" innerHTML={ICONS['chat']} />
-                {props.event.place}
+              <span class="flex items-center gap-2">
+                <span class="icon text-muted" innerHTML={ICONS['location']} />
+                <span class="text-text">{props.event.place}</span>
               </span>
             </Show>
             <span class="badge bg-secondary-light text-secondary">{statusLabel(status())}</span>
           </div>
+
+          <EventLink link={props.event.link} />
         </div>
 
         {/* Icon-only actions, shown only when the user may actually change the event. */}

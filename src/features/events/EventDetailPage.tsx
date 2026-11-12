@@ -20,7 +20,6 @@ import { ICONS } from '../../lib/icons'
 import EventHeader from './EventHeader'
 import EventRsvp from './EventRsvp'
 import EventAttendance from './EventAttendance'
-import EventLink from './EventLink'
 
 export default function EventDetailPage() {
   const params = useParams()
@@ -135,8 +134,6 @@ export default function EventDetailPage() {
                 onEdit={() => navigate(`/events/${event().id}/edit`)}
                 onDelete={handleDelete}
               />
-
-              <EventLink link={event().link} />
 
               <EventRsvp
                 statusOptions={statusOptions().map(s => ({ code: s.code, caption: s.caption, color: s.color }))}

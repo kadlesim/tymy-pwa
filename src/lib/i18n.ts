@@ -77,6 +77,7 @@ const EN: Record<string, string> = {
     'You have answered every open event.',
   'Zobrazit minulé události': 'Show past events',
   'Účast:': 'Attendance:',
+  'Účast': 'Attendance',
   'Vaše účast:': 'Your attendance:',
   'Přicházející': 'Upcoming',
   'Minulé': 'Past',

@@ -103,7 +103,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
     return [...order, withoutStatus].filter(group => group.items.length > 0)
   })
 
-  const total = createMemo(() => groups().reduce((sum, group) => sum + group.items.length, 0))
+  // The total moved out of the header — each group shows its own count prominently.
 
   return (
     <Show when={props.attendance.length > 0}>
@@ -111,7 +111,7 @@ export default function EventAttendance(props: EventAttendanceProps) {
         <div class="p-4 border-b border-border flex items-center justify-between gap-2">
           <h2 class="text-lg font-semibold text-text flex items-center gap-2">
             <span class="icon" innerHTML={ICONS['users']} />
-            {tr('Účast ({n})', { n: total() })}
+            {tr('Účast')}
           </h2>
           <button class="btn btn-secondary text-sm" onClick={props.onToggleHistory}>
             {props.showHistory ? tr('Skrýt historii') : tr('Historie změn')}
@@ -178,7 +178,9 @@ export default function EventAttendance(props: EventAttendanceProps) {
                   style={`background-color: var(--color-${group.color})`}
                 />
                 <span class="text-sm font-medium text-text">{group.label}</span>
-                <span class="text-xs text-muted">{group.items.length}</span>
+                <span class="text-sm font-semibold text-text bg-200 rounded px-1.5 py-0.5 min-w-[1.75rem] text-center leading-5">
+                  {group.items.length}
+                </span>
               </header>
 
               <div class="divide-y divide-border-light">
