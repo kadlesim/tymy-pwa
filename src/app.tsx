@@ -3,6 +3,7 @@
 import { createEffect, onCleanup, Show } from 'solid-js'
 import { Router, Route, Navigate, useLocation, type RouteSectionProps } from '@solidjs/router'
 import { initAuth, revalidateSession, useIsAuthenticated, useIsLoading } from './lib/auth'
+import { getTeam } from './lib/team'
 import { loadCaptions } from './lib/captions'
 import { initPWA, setDeferredPrompt } from './lib/pwa'
 import { ICONS } from './lib/icons'
@@ -71,11 +72,16 @@ function Splash() {
 function PrivateRoute(props: RouteSectionProps<unknown>) {
   const location = useLocation()
 
+  // The team is asked for once. Once it is stored, logging out or an expired session
+  // lands on the login screen directly – going through /team again would force the
+  // user to confirm the same team after every expiry.
+  const unauthenticatedTarget = () => (getTeam() ? '/login' : '/team')
+
   return (
     <Show when={!useIsLoading()} fallback={<Splash />}>
       <Show
         when={useIsAuthenticated()}
-        fallback={<Navigate href="/team" state={{ from: location.pathname }} />}
+        fallback={<Navigate href={unauthenticatedTarget()} state={{ from: location.pathname }} />}
       >
         <Layout>{props.children as any}</Layout>
       </Show>

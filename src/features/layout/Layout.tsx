@@ -7,6 +7,7 @@ import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../../lib/icons'
 import NotificationBell from '../notifications/NotificationBell'
 import { theme, setTheme, toggleTheme, textSize, setTextSize, toggleTextSize, lang, setLang } from '../../lib/prefs'
+import { getTeam } from '../../lib/team'
 import { tr } from '../../lib/i18n'
 
 export { ICONS }
@@ -111,7 +112,8 @@ export default function Layout(props: LayoutProps) {
   const handleLogout = async () => {
     setUserMenuOpen(false)
     await doLogout()
-    navigate('/team')
+    // The team is already known – only ask for it when none was chosen yet.
+    navigate(getTeam() ? '/login' : '/team')
   }
 
   return (

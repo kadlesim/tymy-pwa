@@ -4,6 +4,11 @@ import { createSignal, Show } from 'solid-js'
 import { useNavigate, useLocation } from '@solidjs/router'
 import { doLogin, useSessionExpired, clearSessionExpired } from '../../lib/auth'
 import { getTeam, teamFromHostname, teamHost } from '../../lib/team'
+import {
+  getRememberedLogin,
+  storeRememberedLogin,
+  clearRememberedLogin
+} from '../../lib/remember'
 import { useCommonCaptions } from '../../lib/captions'
 import { tr } from '../../lib/i18n'
 import { ICONS } from '../layout/Layout'
@@ -12,10 +17,14 @@ export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { tAuth, tCommon, tErrors } = useCommonCaptions()
-  
-  const [loginName, setLoginName] = createSignal('')
-  const [password, setPassword] = createSignal('')
-  const [remember, setRemember] = createSignal(false)
+
+  // Credentials saved by a previous "Zapamatovat mě" login on this device (per team),
+  // so an expired session does not force the user to retype everything.
+  const remembered = getRememberedLogin()
+
+  const [loginName, setLoginName] = createSignal(remembered?.login ?? '')
+  const [password, setPassword] = createSignal(remembered?.password ?? '')
+  const [remember, setRemember] = createSignal(remembered !== null)
   const [error, setError] = createSignal<string | null>(null)
   const [isLoading, setIsLoading] = createSignal(false)
   const [showPassword, setShowPassword] = createSignal(false)
@@ -36,6 +45,12 @@ export default function LoginPage() {
     
     try {
       await doLogin(loginName(), password())
+      // Only store credentials that actually worked; unticking the box forgets them.
+      if (remember()) {
+        storeRememberedLogin({ login: loginName(), password: password() })
+      } else {
+        clearRememberedLogin()
+      }
       navigate(from, { replace: true })
     } catch (err: any) {
       setError(err.message || tErrors('unknown'))
@@ -57,24 +72,22 @@ export default function LoginPage() {
       <div class="auth-card w-full max-w-md bg-elevated rounded-xl shadow-lg border border-border p-6 animate-slide-up">
         {/* Logo/Brand */}
         <div class="text-center mb-6">
-          <div class="inline-flex items-center justify-center w-16 h-16 rounded-lg bg-primary-light mb-4">
-            <span class="icon text-primary" innerHTML={ICONS['calendar']} />
-          </div>
-          <h1 class="text-2xl font-bold text-text">tymy.cz</h1>
-          <p class="text-muted mt-1">{tr('Přihlaste se pro přístup k událostem a chatu')}</p>
+          <img
+            src="/icons/icon-192.png"
+            alt=""
+            width="64"
+            height="64"
+            class="inline-block w-16 h-16 mb-4"
+          />
+          <h1 class="text-2xl font-bold text-text">{currentTeam() ?? 'tymy.cz'}</h1>
           <Show when={currentTeam()}>
-            {(host) => (
-              <p class="text-xs text-muted mt-2">
-                {host()}
-                <button
-                  type="button"
-                  class="ml-2 text-primary underline"
-                  onClick={() => navigate('/team')}
-                >
-                  {tr('změnit tým')}
-                </button>
-              </p>
-            )}
+            <button
+              type="button"
+              class="block mx-auto text-xs text-primary underline mt-2"
+              onClick={() => navigate('/team')}
+            >
+              {tr('změnit tým')}
+            </button>
           </Show>
         </div>
         

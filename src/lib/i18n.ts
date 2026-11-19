@@ -191,7 +191,6 @@ const EN: Record<string, string> = {
     'If the e-mail is in our system, you will receive a password reset link. The link is valid for 1 hour.',
   'Zpět k přihlášení': 'Back to sign in',
   'Poslat odkaz pro reset': 'Send reset link',
-  'Přihlaste se pro přístup k událostem a chatu': 'Sign in to access events and chat',
   'změnit tým': 'change team',
   'Platnost přihlášení vypršela. Přihlaste se prosím znovu.':
     'Your session has expired. Please sign in again.',

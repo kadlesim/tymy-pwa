@@ -1,6 +1,6 @@
 # Project state — Tymy PWA
 
-_Last updated: 2026-11-11_
+_Last updated: 2026-11-19_
 
 Handoff notes so work can resume without re-discovering the backend or the
 earlier pitfalls. Keep this file current when significant things change.
@@ -10,8 +10,8 @@ earlier pitfalls. Keep this file current when significant things change.
 ## 0. Where we left off (resume here)
 
 **Everything below is committed and pushed; the working tree is clean.**
-Latest commit: `7cd429a` — notifications (bell feed + Web Push client) and the push-state
-fix for browsers without a service worker (dev server).
+Latest commit (2026-11-19): remembered login ("Zapamatovat mě"), no `/team` step once a
+team is stored, and the login card with the app logo + team heading (§5, §6).
 Remote: `github.com/kadlesim/tymy-pwa`, `master` in sync with `origin/master`.
 
 State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
@@ -33,7 +33,9 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
   waiting for a vote) and **Web Push** — enable in Profile → Nastavení → Notifikace or from
   the bell; the SW shows the notification and opens the mapped route; logging out
   unsubscribes this browser. Plan and backend contract: `docs/NOTIFICATIONS_PLAN.md`.
-- **Team selection** before login (`/team`), **central session validation** (§5).
+- **Team selection** before login (`/team`, only until a team is stored — afterwards an
+  expired/absent session goes straight to `/login`), **remembered login** (prefilled
+  username + password, `Zapamatovat mě`), **central session validation** (§5).
 - **Reporty** = attendance matrix + XLSX export; **Soubory** = placeholder (no file API).
 - **App/PWA icons and the favicon are generated from `logo2.png`** (`npm run icons`).
 
@@ -346,9 +348,11 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
 - **Guards** wait for `initAuth()` (`useIsLoading`) so deep links survive reload.
 - **Team selection** (`/team`, `src/features/auth/TeamPage.tsx`): every team lives on
   `<subdomain>.tymy.cz`, so the address is chosen *before* login and stored in
-  `tymy:team`. It is skipped whenever a valid session exists; `/team` is where the guards
-  send an unauthenticated user (after logout, after an expiry, or on a cold start), and
-  the login screen offers "změnit tým".
+  `tymy:team`. It is skipped whenever a valid session exists **and whenever a team is
+  already stored**: `PrivateRoute`'s fallback (and the logout button in `Layout`) sends an
+  unauthenticated user to `/login` instead of `/team`, so a logout or an expired session
+  never asks for the team again. `/team` is only reached on the very first start or
+  through "změnit tým" on the login screen.
   - Every API call sends `X-Team-Subdomain`; the **dev proxy** turns it into a `Host`
     header (all team vhosts share the Apache box — `Host: nope.tymy.cz` answers the
     wildcard 302, `Host: dev.tymy.cz` answers the API). Avatars carry the team as
@@ -356,6 +360,17 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
   - `checkTeam()` probes `/api/eventTypes`: 200/401 = the team exists, a 3xx (redirect to
     `www.tymy.cz/404.html`) = unknown subdomain.
   - In production the app must be served **on the team's own domain** (same-origin API).
+- **Remembered login** (`src/lib/remember.ts`, `LoginPage`): the `Zapamatovat mě` box was
+  decorative before. A successful login with it ticked stores `{login, password}` under
+  `tymy:login:{team}` (per team, so switching teams never prefills another team's
+  account), and `LoginPage` prefills both fields with the box already ticked. Clearing
+  the box (or logging in unticked) removes the entry. It is **plain text in
+  localStorage** — deliberate, opt-in, and as safe as the device.
+- **Login card**: the app logo (`/icons/icon-192.png`, generated from `logo2.png`) replaces
+  the old grey square with the calendar glyph, and the heading under it is the selected
+  team host (`pd.tymy.cz`, fallback `tymy.cz`) with a small "změnit tým" link. The old
+  tagline "Přihlaste se pro přístup k událostem a chatu" was removed (and its `tr()` key
+  deleted).
 - **Session validation** (`src/lib/auth.ts`, `onUnauthorized` in `src/lib/api.ts`):
   - On start-up a stored session is verified with `GET /user/{id}` *before* the guard
     lets anyone in; a 401/403 drops the token, the cached user `tymy:user`, the
@@ -580,6 +595,21 @@ smoke test confirmed:
 - Poll description in dark mode now resolves to `rgb(215, 220, 225)` (the `.dark .prose`
   overrides); voter names resolve from an embedded `vote.user`, the all-settled roster, or
   `/user/{id}` — verified with a voter absent from every roster category.
+
+### 2026-11-19 — remembered login, team skip, login logo (headless Edge)
+
+- `npm run typecheck` and `npm run build` clean.
+- Login card renders `/icons/icon-192.png` (the logo2-based app icon) instead of the grey
+  square with the calendar glyph, the heading reads `pd.tymy.cz` (the stored team) with
+  "změnit tým" under it, and the removed tagline is gone (headless Edge at 390×844 against
+  `vite preview`, light theme).
+- With `tymy:team` + `tymy:login:pd` seeded, `/login` came up with the username filled in,
+  the password as dots and "Zapamatovat mě" already ticked (Edge screenshot).
+- With `tymy:team=pd` but no session, a direct load of `/events` landed on **`/login`**
+  (the stored team shown as `pd.tymy.cz` + "změnit tým") — not on `/team`. A fresh profile
+  (no stored team) still lands on `/team` with `dev.tymy.cz` suggested.
+- Not exercised live: a real login through the new "remember" path (needs the test
+  account) and the logout button (same redirect logic as the guard).
 
 ---
 
