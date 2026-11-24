@@ -134,9 +134,33 @@ src/
 
 ## Deployment
 
-Build output is a static SPA in `dist/`. Serve with an SPA fallback to `index.html`
-(Netlify `_redirects`, Vercel rewrites, Nginx `try_files`). Requires HTTPS for the
-service worker and install prompt.
+**Live: <https://tymy-pwa.pages.dev>** on **Cloudflare Pages**, serving the `pd` team
+(`TYMY_DEFAULT_TEAM=pd`).
+
+The Pages project is **Git-connected to `github.com/kadlesim/tymy-pwa`**, so **every push
+to `master` builds and deploys automatically** — that is the only release step:
+
+```bash
+git push origin master    # Cloudflare runs `npm run build` and publishes `dist/`
+```
+
+`dist/` is not committed. The build settings on the Pages project are: framework preset
+*None*, build command `npm run build`, output directory `dist`, variable
+`TYMY_DEFAULT_TEAM = pd`.
+
+The app is a static SPA, but it must reach the Tymy API **same-origin** (the API sends no
+CORS headers), so the repo also contains two Cloudflare Pages Functions — `/api/*` and
+`/user_pics/*` — plus `public/_redirects` for the SPA fallback and `wrangler.toml`.
+If you ever need to bypass Git (or preview a local build), a manual upload still works:
+
+```bash
+npm run build
+npx wrangler pages deploy dist --project-name tymy-pwa
+```
+
+Details, proxy contract and the post-deploy checklist: [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+Any other host needs an equivalent same-origin proxy plus an SPA fallback, and HTTPS for
+the service worker and install prompt.
 
 ## Configuration notes
 

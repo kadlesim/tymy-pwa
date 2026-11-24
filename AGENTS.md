@@ -16,6 +16,11 @@ npm run icons      # regenerate placeholder PNG icons
 
 Always finish a change with `npm run typecheck` and `npm run build`.
 
+**Deployment:** the Cloudflare Pages project <https://tymy-pwa.pages.dev> is
+**Git-connected to `origin/master`**, so pushing to `master` builds and deploys
+automatically (`docs/DEPLOYMENT.md`). Do not run `wrangler pages deploy` for a normal
+release; keep `dist/` out of git.
+
 ## Rules
 
 - **Backend:** `https://dev.tymy.cz/api`, HTTPS only, no CORS. Never call it directly

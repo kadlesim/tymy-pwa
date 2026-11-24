@@ -1,7 +1,9 @@
 # Deployment
 
 **Live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`,
-deployed 2026-11-11.
+deployed 2026-11-11. **The Pages project is Git-connected to
+`github.com/kadlesim/tymy-pwa`: every push to `master` builds and deploys automatically**
+— no manual `wrangler` step is needed for a normal release.
 
 The app is a **static SPA** (`dist/`) that must talk to the Tymy API **same-origin**,
 because the API sends no CORS headers. That is why a deploy needs two extra pieces, both
@@ -19,17 +21,22 @@ two handlers port to Netlify/Vercel with minor changes if you prefer those.
 
 ---
 
-## A. Git-connected project (recommended)
+## A. Git-connected project (in use)
 
-1. Push the repo to GitHub (done — `origin` is `github.com/kadlesim/tymy-pwa`, `master`
-   in sync).
-2. Cloudflare dashboard → **Workers & Pages → Create → Pages → Connect to Git**.
-3. Build settings:
-   - Framework preset: *None*
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-   - Environment variable: `TYMY_DEFAULT_TEAM = pd` (the team this deployment serves)
-4. Deploy. Every push to `master` redeploys.
+The live project is already set up this way: GitHub `github.com/kadlesim/tymy-pwa`
+(`master`) → Cloudflare Pages, **auto-deploy on every push to `master`**. A release is
+therefore `git push origin master` (watch the build in the dashboard); nothing has to be
+uploaded by hand, and `dist/` stays out of git.
+
+Build settings configured on the Pages project:
+
+- Framework preset: *None*
+- Build command: `npm run build` (runs `tsc` first, so a type error fails the deploy)
+- Build output directory: `dist`
+- Environment variable: `TYMY_DEFAULT_TEAM = pd` (the team this deployment serves)
+
+To do it again for another team: **Workers & Pages → Create → Pages → Connect to Git**,
+same settings with that team's `TYMY_DEFAULT_TEAM`.
 
 ## B. From the CLI
 
