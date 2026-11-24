@@ -1,11 +1,13 @@
 ﻿// Main layout with header, bottom navigation, and responsive sidebar
 
-import { createSignal, createMemo, createEffect, onCleanup, onMount } from 'solid-js'
+import { createSignal, createMemo, createEffect, onCleanup, onMount, Show } from 'solid-js'
 import { useLocation, useNavigate, A } from '@solidjs/router'
 import { useAuth, doLogout, getDisplayName, getUserAvatar } from '../../lib/auth'
 import { useCommonCaptions } from '../../lib/captions'
 import { ICONS } from '../../lib/icons'
 import NotificationBell from '../notifications/NotificationBell'
+import { useNotifications } from '../notifications/useNotifications'
+import type { NotificationKind } from '../../lib/notifications'
 import { theme, setTheme, toggleTheme, textSize, setTextSize, toggleTextSize, lang, setLang } from '../../lib/prefs'
 import { getTeam } from '../../lib/team'
 import { tr } from '../../lib/i18n'
@@ -18,17 +20,30 @@ interface NavItem {
   icon: string
   /** Shown in the mobile bottom bar; secondary sections live in the drawer only. */
   primary?: boolean
+  /** Notification feed kind counted into this section's badge. */
+  notifications?: NotificationKind
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { path: '/events', label: 'Události', icon: 'calendar', primary: true },
-  { path: '/discussions', label: 'Chat', icon: 'chat', primary: true },
-  { path: '/polls', label: 'Ankety', icon: 'poll', primary: true },
+  { path: '/events', label: 'Události', icon: 'calendar', primary: true, notifications: 'event' },
+  { path: '/discussions', label: 'Chat', icon: 'chat', primary: true, notifications: 'discussion' },
+  { path: '/polls', label: 'Ankety', icon: 'poll', primary: true, notifications: 'poll' },
   { path: '/users', label: 'Tým', icon: 'users', primary: true },
   { path: '/files', label: 'Soubory', icon: 'files' },
   { path: '/reports', label: 'Reporty', icon: 'reports' },
   { path: '/profile', label: 'Profil', icon: 'user', primary: true }
 ]
+
+/** Small counter pinned to a nav glyph; hidden while the section has nothing new. */
+function NavBadge(props: { count: number }) {
+  return (
+    <Show when={props.count > 0}>
+      <span class="absolute -top-1 -right-2 min-w-[1rem] h-4 px-1 rounded-full bg-danger text-white text-[10px] font-semibold leading-4 text-center">
+        {props.count > 99 ? '99+' : props.count}
+      </span>
+    </Show>
+  )
+}
 
 export interface LayoutProps {
   children?: any
@@ -39,6 +54,7 @@ export default function Layout(props: LayoutProps) {
   const navigate = useNavigate()
   const auth = useAuth()
   const { tAuth } = useCommonCaptions()
+  const { counts } = useNotifications()
   const [sidebarOpen, setSidebarOpen] = createSignal(false)
   const [userMenuOpen, setUserMenuOpen] = createSignal(false)
   const [navHidden, setNavHidden] = createSignal(false)
@@ -71,6 +87,10 @@ export default function Layout(props: LayoutProps) {
   // Fine-grained permissions (canPlan, canWrite, …) are enforced per action.
   const visibleNavItems = createMemo(() => (auth().user ? NAV_ITEMS : []))
   const bottomNavItems = createMemo(() => visibleNavItems().filter(item => item.primary))
+
+  // Badge per section: everything the bell lists for that kind (unread posts, new events,
+  // open polls waiting for a vote).
+  const navBadge = (item: NavItem) => (item.notifications ? counts()[item.notifications] : 0)
 
   createEffect(() => {
     location.pathname
@@ -286,7 +306,10 @@ export default function Layout(props: LayoutProps) {
                     inactiveClass="text-text-secondary hover:bg-100"
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <span class="icon w-5 h-5 flex-shrink-0" innerHTML={ICONS[item.icon]} />
+                    <span class="relative inline-flex flex-shrink-0">
+                      <span class="icon w-5 h-5" innerHTML={ICONS[item.icon]} />
+                      <NavBadge count={navBadge(item)} />
+                    </span>
                     <span class="flex-1 truncate">{tr(item.label)}</span>
                   </A>
                 </li>
@@ -432,7 +455,10 @@ export default function Layout(props: LayoutProps) {
                 activeClass="text-primary"
                 inactiveClass="text-text-secondary"
               >
-                <span class="icon w-6 h-6" innerHTML={ICONS[item.icon]} />
+                <span class="relative inline-flex">
+                  <span class="icon w-6 h-6" innerHTML={ICONS[item.icon]} />
+                  <NavBadge count={navBadge(item)} />
+                </span>
                 <span class="truncate max-w-full">{tr(item.label)}</span>
               </A>
             </li>

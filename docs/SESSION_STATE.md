@@ -1,6 +1,6 @@
 # Project state — Tymy PWA
 
-_Last updated: 2026-11-19_
+_Last updated: 2026-11-24_
 
 Handoff notes so work can resume without re-discovering the backend or the
 earlier pitfalls. Keep this file current when significant things change.
@@ -40,15 +40,17 @@ State of the app (all working against **dev.tymy.cz** and **pd.tymy.cz**):
 - **App/PWA icons and the favicon are generated from `logo2.png`** (`npm run icons`).
 
 **Deployment is live: <https://tymy-pwa.pages.dev>** — Cloudflare Pages, `TYMY_DEFAULT_TEAM=pd`.
-`functions/` (Pages Functions for `/api` and `/user_pics`), `public/_redirects` (SPA
-fallback) and `wrangler.toml` are in the repo; see **`docs/DEPLOYMENT.md`**.
+The Pages project is **Git-connected to `origin/master`**: pushing to `master` triggers the
+build (`npm run build`, output `dist/`) and deploys automatically — **no manual `wrangler`
+step for a normal release**. `functions/` (Pages Functions for `/api` and `/user_pics`),
+`public/_redirects` (SPA fallback) and `wrangler.toml` are in the repo; see
+**`docs/DEPLOYMENT.md`** (a manual `npx wrangler pages deploy dist --project-name tymy-pwa`
+is only a fallback, e.g. when the Git build is unavailable).
 Re-verified 2026-11-11 from outside: `/` and `/team` answer 200, `/api/eventTypes` through
 the Pages Function answers `401 Unauthorized` for `pd` (upstream reached, no session) and
-`404 Team not found` for an unknown subdomain. Redeploy with
-`npx wrangler pages deploy dist --project-name tymy-pwa` (or by pushing to `master` if the
-project is Git-connected). The notification build is live: `/sw.js` contains
-`importScripts("/push-sw.js")` and `/push-sw.js` is served as JavaScript (verified right
-after the 2026-11-11 deploy).
+`404 Team not found` for an unknown subdomain. The notification build is live: `/sw.js`
+contains `importScripts("/push-sw.js")` and `/push-sw.js` is served as JavaScript (verified
+right after the 2026-11-11 deploy).
 
 **Next likely tasks** (see §7 for the full list):
 1. **Test notifications live** with a second account: enable push in Profile → Nastavení →
@@ -431,6 +433,12 @@ Config: `vite.config.ts` (proxy + PWA), `tailwind.config.cjs`, `postcss.config.c
     service workers, iOS requires an installed PWA.
   - Server triggers: new discussion posts and event create/time-change/delete, never the
     author; no read state, badge or per-user preferences server-side.
+  - **Section badges**: the same feed is counted per kind, so the matching nav entry is
+    badged — Chat (unread discussion posts), Události (new events) and Ankety (open polls
+    waiting for a vote, which the bell badge itself does not count). Badges show in the
+    mobile bottom bar and in the drawer; counts are capped at `99+`. The `seen` state lives
+    in module scope in `useNotifications`, so marking something read in the bell clears the
+    nav badges immediately (both hook instances share one signal).
 - **Captions** only fetched in production; dev uses defaults (avoids 404 noise).
 - **Avatars** go through `apiAssetUrl()`; `/user_pics` is proxied in dev, or set
   `VITE_ASSET_ORIGIN` in production.

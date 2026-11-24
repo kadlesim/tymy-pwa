@@ -1,4 +1,4 @@
-// Queries + seen state behind the notification bell.
+// Queries + seen state behind the notification bell and the nav badges.
 
 import { createEffect, createMemo, createSignal } from 'solid-js'
 import { useQuery } from '@tanstack/solid-query'
@@ -20,22 +20,34 @@ import {
   saveSeen,
   unreadCountOf,
   type NotificationItem,
+  type NotificationKind,
   type SeenState
 } from '../../lib/notifications'
+
+// The bell and the layout's nav badges each call this hook, so the "seen" state lives in
+// module scope: opening a notification in the bell also clears the badge in the nav.
+const [seenState, setSeenState] = createSignal<SeenState>(loadSeen(null))
+let seenUserId: number | null = null
+let seenBound = false
+
+/** Reloads the stored high-water marks when the signed-in account changes. */
+function syncSeenUser(userId: number | null) {
+  if (seenBound && seenUserId === userId) return
+  seenBound = true
+  seenUserId = userId
+  setSeenState(loadSeen(userId))
+}
 
 export function useNotifications() {
   const auth = useAuth()
   const userId = () => auth().user?.id ?? null
 
-  const [seen, setSeen] = createSignal<SeenState>(loadSeen(userId()))
-
   // Different user on the same browser → different seen state.
-  createEffect(() => {
-    setSeen(loadSeen(userId()))
-  })
+  createEffect(() => syncSeenUser(userId()))
 
+  const seen = seenState
   const updateSeen = (next: SeenState) => {
-    setSeen(next)
+    setSeenState(next)
     saveSeen(userId(), next)
   }
 
@@ -84,6 +96,13 @@ export function useNotifications() {
 
   const unreadCount = createMemo(() => unreadCountOf(items()))
 
+  // Per-section totals for the navigation badges: everything the bell would list.
+  const counts = createMemo<Record<NotificationKind, number>>(() => {
+    const byKind: Record<NotificationKind, number> = { discussion: 0, event: 0, poll: 0 }
+    for (const item of items()) byKind[item.kind] += 1
+    return byKind
+  })
+
   const markRead = (item: NotificationItem) => {
     const current = seen()
 
@@ -127,6 +146,7 @@ export function useNotifications() {
   return {
     items,
     unreadCount,
+    counts,
     isLoading: () => discussionsQuery.isPending || eventsQuery.isPending,
     isError: () => discussionsQuery.isError || eventsQuery.isError,
     refetch,
